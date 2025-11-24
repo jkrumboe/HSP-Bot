@@ -1,0 +1,21 @@
+{
+  "name": "hsp-bot",
+  "version": "1.0.0",
+  "description": "��#\u0000 \u0000H\u0000S\u0000P\u0000-\u0000B\u0000o\u0000t\u0000\r\u0000 \u0000",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jkrumboe/HSP-Bot.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jkrumboe/HSP-Bot/issues"
+  },
+  "homepage": "https://github.com/jkrumboe/HSP-Bot#readme"
+}
