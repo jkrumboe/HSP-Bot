@@ -49,18 +49,20 @@ async function fetchBookings(page = 1) {
 }
 
 
-// Logik: Volleyball Level 3 Montag 20:00
+// Logik: Volleyball heute
 function findTargetCourses(activities) {
+  const today = new Date();
+  const todayDay = today.getDate();
+  const todayMonth = today.getMonth();
+  const todayYear = today.getFullYear();
+
   return activities.filter(a => {
     const date = new Date(a.startDate);
-
-    const weekday = date.getUTCDay();  // Montag = 1
-    const hour = date.getUTCHours();   // 20 Uhr Slot
-
+    
     return (
-      a.description.includes("Level 3") &&
-      weekday === 1 &&
-      hour === 20
+      date.getDate() === todayDay &&
+      date.getMonth() === todayMonth &&
+      date.getFullYear() === todayYear
     );
   });
 }
@@ -93,7 +95,7 @@ async function main() {
   // Filtering example:
   const target = findTargetCourses(filtered);
 
-  console.log("\nLevel 3 Montag 20:00 Kurse:");
+  console.log("\nHeutige Kurse:");
   console.log(target);
 }
 
