@@ -149,6 +149,10 @@ app.get('/api/courses', async (req, res) => {
       courses = courses.filter(c => c.availableParticipantCount >= minInt);
     }
 
+    // Filter out past courses
+    const now = new Date();
+    courses = courses.filter(c => new Date(c.startDate) > now);
+
     // Fetch supervisor names
     let supervisorNames = {};
     if (courses.length > 0) {

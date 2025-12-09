@@ -128,12 +128,16 @@ async function searchCourses({
   }
 
   // Add supervisor names and locations to filtered bookings
+  const now = new Date();
   filtered.forEach(booking => {
     booking.supervisors = supervisorNames[booking.id] || [];
     booking.location = locationNames[booking.productId] || booking.location || 'Unbekannt';
   });
 
-  return { bookings, filtered };
+  // Filter out past courses
+  const futureCourses = filtered.filter(booking => new Date(booking.startDate) > now);
+
+  return { bookings, filtered: futureCourses };
 }
 
 function formatCourse(course) {
