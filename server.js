@@ -153,6 +153,49 @@ app.get('/api/courses', async (req, res) => {
     const now = new Date();
     courses = courses.filter(c => new Date(c.startDate) > now);
 
+    // Get user's existing bookings to check participation status
+    let userBookings = {};
+    const memberInfo = getStoredMemberInfo();
+    if (memberInfo && memberInfo.memberId && courses.length > 0) {
+      try {
+        const token = await getValidToken();
+        const bookingFilter = {
+          "$or": [
+            { "participations.memberId": memberInfo.memberId },
+            { "participations.invitedMemberId": memberInfo.memberId }
+          ],
+          "startDate": { "$gte": now.toISOString() }
+        };
+        const encoded = encodeURIComponent(JSON.stringify(bookingFilter));
+        const userBookingsUrl = `${API_URL}/bookings?s=${encoded}&join=participations&limit=100&page=1&sort=startDate,ASC`;
+        
+        const userBookingsRes = await fetch(userBookingsUrl, {
+          method: 'GET',
+          headers: { 
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (userBookingsRes.ok) {
+          const userBookingsData = await userBookingsRes.json();
+          userBookingsData.data?.forEach(booking => {
+            const participation = booking.participations?.find(p => 
+              p.memberId === memberInfo.memberId || p.invitedMemberId === memberInfo.memberId
+            );
+            if (participation) {
+              userBookings[booking.id] = {
+                participationStatus: participation.status, // 1 = booked, 3 = waiting list
+                participationId: participation.id
+              };
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Fehler beim Laden der User-Bookings:', error);
+      }
+    }
+
     // Fetch supervisor names
     let supervisorNames = {};
     if (courses.length > 0) {
@@ -206,7 +249,8 @@ app.get('/api/courses', async (req, res) => {
       available: c.availableParticipantCount,
       maxParticipants: c.maxParticipantCount,
       status: c.status,
-      supervisors: supervisorNames[c.id] || []
+      supervisors: supervisorNames[c.id] || [],
+      userParticipation: userBookings[c.id] || null // null, { participationStatus: 1 } (booked), or { participationStatus: 3 } (waiting)
     }));
 
     res.json({ courses: formatted, total: formatted.length });

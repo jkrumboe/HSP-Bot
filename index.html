@@ -173,6 +173,21 @@
       transform: translateY(-2px);
     }
 
+    .btn-primary:disabled,
+    .btn-secondary:disabled {
+      opacity: 0.5;
+      background-color: #1a1a1a;
+      color: #fff;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-primary:disabled:hover,
+    .btn-secondary:disabled:hover {
+      background: #00d4ff;
+      transform: none;
+    }
+
     .btn-danger {
       background: #ff4444;
       color: white;
@@ -212,11 +227,20 @@
 
     .course-card:hover {
       background: rgba(255,255,255,0.08);
-      transform: translateX(5px);
     }
 
     .course-card.full {
       border: 1px dashed #ff4444;
+    }
+
+    .course-card.booked {
+      border: 2px solid #44ff44;
+      background: rgba(68, 255, 68, 0.05);
+    }
+
+    .course-card.waiting {
+      border: 2px solid #ffaa00;
+      background: rgba(255, 170, 0, 0.05);
     }
 
     .course-info h3 {
@@ -800,11 +824,18 @@
         const supervisors = course.supervisors && course.supervisors.length > 0 
           ? `<span>👤 ${course.supervisors.map(s => `${s.firstName} ${s.lastName}`).join(', ')}</span>` 
           : '';
+        
+        // Check user participation status
+        const isBooked = course.userParticipation?.participationStatus === 1;
+        const isWaiting = course.userParticipation?.participationStatus === 3;
+        const cardClass = isBooked ? 'booked' : (isWaiting ? 'waiting' : (isFull ? 'full' : ''));
+        const statusBadge = isBooked ? '<span style="color: #44ff44; font-weight: bold;">✓ Angemeldet</span>' 
+                          : (isWaiting ? '<span style="color: #ffaa00; font-weight: bold;">Warteliste</span>' : '');
 
         html += `
-          <div class="course-card ${isFull ? 'full' : ''}">
+          <div class="course-card ${cardClass}">
             <div class="course-info">
-              <h3>${course.description}</h3>
+              <h3>${course.description} ${statusBadge}</h3>
               <div class="course-meta">
                 <span>📅 ${dayName}, ${dateStr}</span>
                 <span>🕐 ${time} Uhr</span>
@@ -818,10 +849,10 @@
                 ${isFull ? 'Voll' : ` ${course.available} frei`}
               </span>
               <div class="course-actions">
-                <button class="btn btn-primary" onclick="quickRegister(${course.id})">
-                  ${isFull ? 'Warteliste' : 'Anmelden'}
+                <button class="btn btn-primary" onclick="quickRegister(${course.id})" ${isBooked || isWaiting ? 'disabled' : ''}>
+                  ${isBooked ? '✓ Angemeldet' : (isWaiting ? 'Warteliste' : (isFull ? 'Warteliste' : 'Anmelden'))}
                 </button>
-                <button class="btn btn-secondary" onclick="openPollingModal(${course.id})">
+                <button class="btn btn-secondary" onclick="openPollingModal(${course.id})" ${isBooked || isWaiting ? 'disabled' : ''}>
                   Polling
                 </button>
               </div>
