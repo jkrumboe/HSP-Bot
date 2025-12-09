@@ -84,6 +84,55 @@ async function searchCourses({
   const bookings = await fetchBookings({ pages, limit, filter });
   const filtered = filterActivities(bookings, { level, minAvailable });
 
+  // Fetch supervisor names
+  let supervisorNames = {};
+  if (filtered.length > 0) {
+    try {
+      const bookingIds = filtered.map(b => b.id).join(',');
+      const supervisorUrl = `https://backbone-web-api.production.munster.delcom.nl/bookings/query/supervisorNamesByBookingId?bookingIds=${bookingIds}`;
+      const res = await fetch(supervisorUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        supervisorNames = await res.json();
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden der Supervisor-Namen:', error);
+    }
+  }
+
+  // Fetch location names from products
+  let locationNames = {};
+  if (filtered.length > 0) {
+    try {
+      const productIds = [...new Set(filtered.map(b => b.productId).filter(id => id))];
+      if (productIds.length > 0) {
+        const filter = { id: { "$in": productIds } };
+        const encoded = encodeURIComponent(JSON.stringify(filter));
+        const productsUrl = `https://backbone-web-api.production.munster.delcom.nl/products?s=${encoded}`;
+        const res = await fetch(productsUrl, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+        if (res.ok) {
+          const productsData = await res.json();
+          productsData.data?.forEach(product => {
+            locationNames[product.id] = product.description;
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden der Locations:', error);
+    }
+  }
+
+  // Add supervisor names and locations to filtered bookings
+  filtered.forEach(booking => {
+    booking.supervisors = supervisorNames[booking.id] || [];
+    booking.location = locationNames[booking.productId] || booking.location || 'Unbekannt';
+  });
+
   return { bookings, filtered };
 }
 
@@ -95,10 +144,13 @@ function formatCourse(course) {
 
   const location = course.location ? ` | ${course.location}` : '';
   const available = course.availableParticipantCount > 0 ? `✅ ${course.availableParticipantCount} frei` : '❌ Voll';
+  const supervisors = course.supervisors && course.supervisors.length > 0 
+    ? ` | 👤 ${course.supervisors.map(s => `${s.firstName} ${s.lastName}`).join(', ')}` 
+    : '';
 
   return {
     id: course.id,
-    display: `[${course.id}] ${dayName} ${time} (${dateStr})${location} | ${course.description} | ${available}`
+    display: `[${course.id}] ${dayName} ${time} (${dateStr})${location} | ${course.description} | ${available}${supervisors}`
   };
 }
 

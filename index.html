@@ -101,7 +101,7 @@
       display: none;
       background: rgba(255,255,255,0.03);
       border-radius: 16px;
-      padding: 30px;
+      padding: 16px;
     }
 
     .panel.active {
@@ -128,11 +128,15 @@
     input, select, textarea {
       width: 100%;
       padding: 12px 15px;
-      background: rgba(255,255,255,0.05);
+      background: rgba(255,255,255,0.1);
       border: 1px solid rgba(255,255,255,0.1);
       border-radius: 8px;
       color: #fff;
       font-size: 1em;
+    }
+
+    option {
+      color: #000;
     }
 
     input:focus, select:focus, textarea:focus {
@@ -203,7 +207,6 @@
       grid-template-columns: 1fr auto;
       gap: 15px;
       align-items: center;
-      border-left: 4px solid #00d4ff;
       transition: all 0.3s;
     }
 
@@ -213,8 +216,7 @@
     }
 
     .course-card.full {
-      border-left-color: #ff4444;
-      opacity: 0.7;
+      border: 1px dashed #ff4444;
     }
 
     .course-info h3 {
@@ -469,14 +471,14 @@
     </div>
 
     <div class="tabs">
-      <button class="tab active" data-tab="courses">🔍 Kurse suchen</button>
-      <button class="tab" data-tab="register">📝 Anmeldung</button>
-      <button class="tab" data-tab="auth">🔑 Auth-Daten</button>
+      <button class="tab active" data-tab="courses"> Kurse suchen</button>
+      <button class="tab" data-tab="register"> Anmeldung</button>
+      <button class="tab" data-tab="auth"> Auth-Daten</button>
     </div>
 
     <!-- Kurse suchen Panel -->
     <div class="panel active" id="panel-courses">
-      <h2>🔍 Kurse suchen</h2>
+      <h2>Kurse suchen</h2>
       
       <div class="filter-row">
         <div class="form-group">
@@ -535,7 +537,7 @@
         </div>
       </div>
 
-      <button class="btn btn-primary" id="registerBtn">🚀 Anmeldung starten</button>
+      <button class="btn btn-primary" id="registerBtn">Anmeldung starten</button>
 
       <div class="active-jobs" id="activeJobs"></div>
 
@@ -549,10 +551,10 @@
 
     <!-- Auth-Daten Panel -->
     <div class="panel" id="panel-auth">
-      <h2>🔑 Authentifizierungsdaten importieren</h2>
+      <h2>Authentifizierungsdaten importieren</h2>
 
       <div class="instructions">
-        <h3>📋 Anleitung zum Abrufen der Auth-Daten</h3>
+        <h3>Anleitung zum Abrufen der Auth-Daten</h3>
         <ol>
           <li>Öffne die <a href="https://buchung.hssp-muenster.de/" target="_blank" style="color: #00d4ff;">HSP-Website</a> und melde dich an</li>
           <li>Drücke <code>F12</code> um die Entwickler-Tools zu öffnen</li>
@@ -570,7 +572,7 @@
         <textarea id="authDataInput" placeholder='Hier den kopierten Text einfügen...'></textarea>
       </div>
 
-      <button class="btn btn-primary" id="importAuthBtn">💾 Importieren</button>
+      <button class="btn btn-primary" id="importAuthBtn">Importieren</button>
 
       <div id="authResult" class="hidden"></div>
     </div>
@@ -580,7 +582,7 @@
   <div class="modal" id="pollingModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3>🔄 Polling-Anmeldung</h3>
+        <h3>Polling-Anmeldung</h3>
         <button class="modal-close" onclick="closePollingModal()">×</button>
       </div>
       <p>Wähle die Einstellungen für die wiederholte Anmeldung:</p>
@@ -593,7 +595,7 @@
         <input type="number" id="modalMaxAttempts" placeholder="z.B. 20">
       </div>
       <input type="hidden" id="modalBookingId">
-      <button class="btn btn-primary" onclick="startPollingFromModal()">🚀 Starten</button>
+      <button class="btn btn-primary" onclick="startPollingFromModal()">Starten</button>
     </div>
   </div>
 
@@ -603,8 +605,11 @@
     let activeJobs = new Map();
 
     function connectWebSocket() {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      ws = new WebSocket(`${protocol}//${window.location.host}`);
+      // In development, connect to backend server directly
+      const wsUrl = window.location.hostname === 'localhost' 
+        ? 'ws://localhost:3000'
+        : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+      ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         document.getElementById('wsStatus').classList.add('connected');
@@ -792,6 +797,9 @@
         const time = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
         const dateStr = date.toLocaleDateString('de-DE');
         const isFull = course.available <= 0;
+        const supervisors = course.supervisors && course.supervisors.length > 0 
+          ? `<span>👤 ${course.supervisors.map(s => `${s.firstName} ${s.lastName}`).join(', ')}</span>` 
+          : '';
 
         html += `
           <div class="course-card ${isFull ? 'full' : ''}">
@@ -802,18 +810,19 @@
                 <span>🕐 ${time} Uhr</span>
                 <span>📍 ${course.location}</span>
                 <span>🎫 ID: ${course.id}</span>
+                ${supervisors}
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
               <span class="availability ${isFull ? 'full' : 'available'}">
-                ${isFull ? '❌ Voll' : `✅ ${course.available} frei`}
+                ${isFull ? 'Voll' : ` ${course.available} frei`}
               </span>
               <div class="course-actions">
                 <button class="btn btn-primary" onclick="quickRegister(${course.id})">
-                  🎯 Anmelden
+                  ${isFull ? 'Warteliste' : 'Anmelden'}
                 </button>
                 <button class="btn btn-secondary" onclick="openPollingModal(${course.id})">
-                  🔄 Polling
+                  Polling
                 </button>
               </div>
             </div>

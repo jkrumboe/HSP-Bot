@@ -149,16 +149,60 @@ app.get('/api/courses', async (req, res) => {
       courses = courses.filter(c => c.availableParticipantCount >= minInt);
     }
 
+    // Fetch supervisor names
+    let supervisorNames = {};
+    if (courses.length > 0) {
+      try {
+        const bookingIds = courses.map(c => c.id).join(',');
+        const supervisorUrl = `${API_URL}/bookings/query/supervisorNamesByBookingId?bookingIds=${bookingIds}`;
+        const supervisorRes = await fetch(supervisorUrl, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' }
+        });
+        if (supervisorRes.ok) {
+          supervisorNames = await supervisorRes.json();
+        }
+      } catch (error) {
+        console.error('Fehler beim Laden der Supervisor-Namen:', error);
+      }
+    }
+
+    // Fetch location names from products
+    let locationNames = {};
+    if (courses.length > 0) {
+      try {
+        const productIds = [...new Set(courses.map(c => c.productId).filter(id => id))];
+        if (productIds.length > 0) {
+          const filter = { id: { "$in": productIds } };
+          const encoded = encodeURIComponent(JSON.stringify(filter));
+          const productsUrl = `${API_URL}/products?s=${encoded}`;
+          const productsRes = await fetch(productsUrl, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+          });
+          if (productsRes.ok) {
+            const productsData = await productsRes.json();
+            productsData.data?.forEach(product => {
+              locationNames[product.id] = product.description;
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Fehler beim Laden der Locations:', error);
+      }
+    }
+
     // Format für Frontend
     const formatted = courses.map(c => ({
       id: c.id,
       description: c.description,
       startDate: c.startDate,
       endDate: c.endDate,
-      location: c.location || 'Unbekannt',
+      location: locationNames[c.productId] || c.location || 'Unbekannt',
       available: c.availableParticipantCount,
       maxParticipants: c.maxParticipantCount,
-      status: c.status
+      status: c.status,
+      supervisors: supervisorNames[c.id] || []
     }));
 
     res.json({ courses: formatted, total: formatted.length });
