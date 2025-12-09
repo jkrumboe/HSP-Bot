@@ -101,15 +101,15 @@ async function main() {
 
     const bookings = await fetchBookings();
     
-    // Filter: Level 1 oder Level 2, verfügbar
+    // Filter: Level 2 oder Level 3, verfügbar
     const available = bookings.filter(b => {
-      const hasLevel = b.description.includes("Level 1") || b.description.includes("Level 2");
+      const hasLevel = b.description.includes("Level 2") || b.description.includes("Level 3");
       const isAvailable = b.availableParticipantCount > 0;
       return hasLevel && isAvailable;
     });
 
     if (available.length === 0) {
-      console.log("❌ Keine verfügbaren Level 1 oder Level 2 Kurse heute gefunden.");
+      console.log("❌ Keine verfügbaren Level 2 oder Level 3 Kurse heute gefunden.");
       return;
     }
 
