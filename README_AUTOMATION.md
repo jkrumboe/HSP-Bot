@@ -7,6 +7,7 @@ Ein automatisiertes System zur Anmeldung in Hochschulsport-Kursen mit Token-Mana
 - ✅ **Automatische Authentifizierung** - Tokens werden verwaltet und automatisch erneuert
 - ✅ **Polling-System** - Regelmäßige Anmeldungsversuche mit konfigurierbarem Intervall
 - ✅ **Batch-Verarbeitung** - Mehrere Kurse gleichzeitig anmelden
+- ✅ **Web-GUI** - Interaktive Oberfläche mit Live-Feedback
 
 ## 📦 Installation
 
@@ -34,19 +35,68 @@ node import-token.js
 
 Danach wird der Token automatisch in `token-store.json` gespeichert.
 
-## 🎯 Schnelle Start-Befehle
+## 🖥️ Web-GUI (Empfohlen)
 
-### Einzelne Anmeldung (memberId wird automatisch aus Token/`auth-data.json` geladen)
+Die einfachste Art, den HSP-Bot zu nutzen:
+
+```bash
+# Server starten
+npm run server
+# oder
+node server.js
+```
+
+Dann öffne **http://localhost:3000** im Browser.
+
+### GUI-Features
+
+| Feature | Beschreibung |
+|---------|--------------|
+| 🔍 **Kurssuche** | Filtere nach Level, Zeitraum und freien Plätzen |
+| 🎯 **Schnellanmeldung** | Ein Klick auf "Anmelden" für sofortige Buchung |
+| 🔄 **Polling** | Wiederholte Versuche mit Live-Status-Updates |
+| 🔑 **Auth-Import** | Token direkt im Browser einfügen |
+| 📊 **Live-Feedback** | WebSocket-basierte Echtzeit-Updates |
+
+### Auth-Daten über GUI importieren
+
+1. Öffne http://localhost:3000
+2. Klicke auf den Tab **"🔑 Auth-Daten"**
+3. Folge der Anleitung zum Kopieren der Daten aus dem Browser
+4. Füge die Daten ein und klicke "Importieren"
+
+## 🎯 Schnelle Start-Befehle (Terminal)
+
+### 1️⃣ Kurse suchen
+
+```bash
+# Alle Volleyball-Kurse der nächsten 8 Tage
+node searchCourses.js
+
+# Nur Level 3 Kurse
+node searchCourses.js --level 3
+
+# Kurse mit mindestens 5 freien Plätzen
+node searchCourses.js --min-available 5
+
+# Level 2 in den nächsten 14 Tagen mit mindestens 3 freien Plätzen
+node searchCourses.js --level 2 --days 14 --min-available 3
+
+# Hilfe anzeigen
+node searchCourses.js --help
+```
+
+### 2️⃣ Einzelne Anmeldung (memberId wird automatisch aus Token/`auth-data.json` geladen)
 ```bash
 node register-course-auto.js 36432
 ```
 
-### Polling mit 60 Sekunden Intervall
+### 3️⃣ Polling mit 60 Sekunden Intervall
 ```bash
 node register-course-auto.js 36432 60
 ```
 
-### Polling mit Limit (30s, max. 20 Versuche)
+### 4️⃣ Polling mit Limit (30s, max. 20 Versuche)
 ```bash
 node register-course-auto.js 36432 30 20
 ```
@@ -55,6 +105,8 @@ node register-course-auto.js 36432 30 20
 
 | Skript | Beschreibung | Verwendung |
 |--------|---|---|
+| `server.js` | Web-GUI Server | `npm run server` oder `node server.js` |
+| `searchCourses.js` | Kurssuche mit Filtern | `node searchCourses.js [--level LEVEL] [--min-available COUNT] [--days DAYS]` |
 | `register-course-auto.js` | Produktive Anmeldung + Polling | `node register-course-auto.js [memberId] <bookingId> [intervalSeconds] [maxAttempts]` |
 | `token-manager.js` | Token-Verwaltung & Renewal | Import nur, nicht direkt aufrufen |
 | `import-token.js` | Browser-Token Importer | `node import-token.js` |
@@ -67,6 +119,27 @@ node register-course-auto.js 36432 30 20
 - Keine Passwörter im Code
 
 ## 📝 Konfiguration
+
+### Kurssuche mit `searchCourses.js`
+
+Die Kurssuche ist das erste Werkzeug, um passende Kurse zu finden:
+
+**Filter-Optionen:**
+- `--level LEVEL` - Nach Niveau filtern (z.B. 1, 2, 3)
+- `--min-available COUNT` - Nur Kurse mit mindestens COUNT freien Plätzen
+- `--days DAYS` - Zeitraum in Tagen (Standard: 8)
+
+**Beispiel-Workflow:**
+```bash
+# 1. Alle verfügbaren Kurse anschauen
+node searchCourses.js
+
+# 2. Nur Level 3 Kurse mit freien Plätzen
+node searchCourses.js --level 3 --min-available 1
+
+# 3. BookingId aus der Ausgabe kopieren und Anmeldung starten
+node register-course-auto.js 36432 60
+```
 
 ### Member ID/Booking ID setzen
 
