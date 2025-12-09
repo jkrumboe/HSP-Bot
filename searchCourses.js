@@ -1,0 +1,191 @@
+// searchCourses.js - Kurssuche mit flexiblen Filtern
+
+const Volleyball_ID = 285;
+const DAYS_OF_WEEK = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
+function buildDateRange(startOffsetDays = 0, endOffsetDays = 8) {
+  const start = new Date();
+  start.setDate(start.getDate() + startOffsetDays);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date();
+  end.setDate(end.getDate() + endOffsetDays);
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end };
+}
+
+function buildUrl({ page = 1, limit = 50, filter }) {
+  const encoded = encodeURIComponent(JSON.stringify(filter));
+  return `https://backbone-web-api.production.munster.delcom.nl/bookings?s=${encoded}&limit=${limit}&page=${page}&sort=startDate,ASC`;
+}
+
+async function fetchBookingsPage({ page = 1, limit = 50, filter }) {
+  const url = buildUrl({ page, limit, filter });
+  const res = await fetch(url, { method: 'GET', headers: { Accept: 'application/json' } });
+
+  if (!res.ok) {
+    console.error('❌ Fehler beim Laden der Bookings:', res.status);
+    console.error(await res.text());
+    return [];
+  }
+
+  const data = await res.json();
+  return data.data || [];
+}
+
+async function fetchBookings({ pages = 2, limit = 50, filter }) {
+  const tasks = Array.from({ length: pages }, (_, idx) => fetchBookingsPage({ page: idx + 1, limit, filter }));
+  const results = await Promise.all(tasks);
+  return results.flat();
+}
+
+function parseLevel(description) {
+  const match = description.match(/Level\s+(\d+)/i);
+  return match ? parseInt(match[1]) : null;
+}
+
+function filterActivities(activities, { level, minAvailable }) {
+  return activities.filter(a => {
+    if (level !== undefined) {
+      const courseLevel = parseLevel(a.description);
+      if (courseLevel !== level) return false;
+    }
+
+    if (minAvailable !== undefined) {
+      if (a.availableParticipantCount < minAvailable) return false;
+    }
+
+    return true;
+  });
+}
+
+async function searchCourses({
+  linkedProductIds = [Volleyball_ID],
+  startOffsetDays = 0,
+  endOffsetDays = 8,
+  pages = 2,
+  limit = 50,
+  level,           // z.B. 1, 2, 3 für Level-Filter
+  minAvailable,    // Mindestanzahl freier Plätze
+  statusNot = 2    // 2 = abgesagt
+} = {}) {
+  const { start, end } = buildDateRange(startOffsetDays, endOffsetDays);
+
+  const filter = {
+    startDate: { "$gte": start.toISOString(), "$lte": end.toISOString() },
+    linkedProductId: { "$in": linkedProductIds },
+  };
+
+  if (statusNot !== undefined) {
+    filter.status = { "$ne": statusNot };
+  }
+
+  const bookings = await fetchBookings({ pages, limit, filter });
+  const filtered = filterActivities(bookings, { level, minAvailable });
+
+  return { bookings, filtered };
+}
+
+function formatCourse(course) {
+  const date = new Date(course.startDate);
+  const dayName = DAYS_OF_WEEK[date.getUTCDay()];
+  const time = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const dateStr = date.toLocaleDateString('de-DE');
+
+  const location = course.location ? ` | ${course.location}` : '';
+  const available = course.availableParticipantCount > 0 ? `✅ ${course.availableParticipantCount} frei` : '❌ Voll';
+
+  return {
+    id: course.id,
+    display: `[${course.id}] ${dayName} ${time} (${dateStr})${location} | ${course.description} | ${available}`
+  };
+}
+
+function printUsage() {
+  console.log(`
+📚 Kurssuche - Verwendung
+========================
+
+node searchCourses.js [--level LEVEL] [--min-available COUNT] [--days DAYS] [--help]
+
+Parameter:
+  --level LEVEL           Filter nach Niveau (z.B. 1, 2, 3)
+  --min-available COUNT   Nur Kurse mit mindestens COUNT freien Plätzen
+  --days DAYS             Zeitraum in Tagen (Standard: 8)
+  --help                  Diese Hilfe anzeigen
+
+Beispiele:
+  node searchCourses.js
+  → Alle Volleyball-Kurse der nächsten 8 Tage
+
+  node searchCourses.js --level 3
+  → Nur Level 3 Kurse
+
+  node searchCourses.js --min-available 5
+  → Nur Kurse mit mindestens 5 freien Plätzen
+
+  node searchCourses.js --level 2 --days 14 --min-available 3
+  → Level 2, nächste 14 Tage, mindestens 3 frei
+  `);
+}
+
+function parseArgs() {
+  const args = process.argv.slice(2);
+  const options = {
+    level: undefined,
+    minAvailable: undefined,
+    days: 8
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+
+    if (arg === '--help') {
+      printUsage();
+      process.exit(0);
+    } else if (arg === '--level' && args[i + 1]) {
+      options.level = parseInt(args[++i]);
+    } else if (arg === '--min-available' && args[i + 1]) {
+      options.minAvailable = parseInt(args[++i]);
+    } else if (arg === '--days' && args[i + 1]) {
+      options.days = parseInt(args[++i]);
+    }
+  }
+
+  return options;
+}
+
+async function main() {
+  const options = parseArgs();
+
+  console.log('🔍 Suche Volleyball-Kurse...\n');
+
+  const { bookings, filtered } = await searchCourses({
+    linkedProductIds: [Volleyball_ID],
+    startOffsetDays: 0,
+    endOffsetDays: options.days,
+    level: options.level,
+    minAvailable: options.minAvailable,
+    pages: 2,
+  });
+
+  console.log(`📊 Ergebnis: ${filtered.length} Kurse gefunden (von ${bookings.length} insgesamt)\n`);
+
+  if (filtered.length === 0) {
+    console.log('❌ Keine Kurse mit diesen Kriterien gefunden.\n');
+    return;
+  }
+
+  // Sortiere nach Startdatum
+  filtered.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+
+  for (const course of filtered) {
+    const { display } = formatCourse(course);
+    console.log(display);
+  }
+
+  console.log(`\n💡 Tipp: node register-course-auto.js [memberId] <bookingId> [intervalSeconds] [maxAttempts]`);
+}
+
+main().catch(console.error);

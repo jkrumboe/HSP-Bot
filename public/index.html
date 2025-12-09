@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏐 HSP-Bot - Kursanmeldung</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      color: #e0e0e0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    header {
+      text-align: center;
+      padding: 30px 0;
+    }
+
+    header h1 {
+      font-size: 2.5em;
+      color: #00d4ff;
+      margin-bottom: 10px;
+    }
+
+    header p {
+      color: #888;
+      font-size: 1.1em;
+    }
+
+    .status-bar {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 15px 25px;
+      margin-bottom: 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ff4444;
+    }
+
+    .status-dot.connected {
+      background: #44ff44;
+      box-shadow: 0 0 10px #44ff44;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .tab {
+      padding: 12px 24px;
+      background: rgba(255,255,255,0.05);
+      border: none;
+      border-radius: 8px;
+      color: #888;
+      cursor: pointer;
+      font-size: 1em;
+      transition: all 0.3s;
+    }
+
+    .tab:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .tab.active {
+      background: #00d4ff;
+      color: #1a1a2e;
+      font-weight: bold;
+    }
+
+    .panel {
+      display: none;
+      background: rgba(255,255,255,0.03);
+      border-radius: 16px;
+      padding: 30px;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    h2 {
+      color: #00d4ff;
+      margin-bottom: 20px;
+      font-size: 1.5em;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #aaa;
+      font-size: 0.95em;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 15px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1em;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #00d4ff;
+    }
+
+    textarea {
+      min-height: 200px;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1em;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: #00d4ff;
+      color: #1a1a2e;
+      font-weight: bold;
+    }
+
+    .btn-primary:hover {
+      background: #00b8e0;
+      transform: translateY(-2px);
+    }
+
+    .btn-danger {
+      background: #ff4444;
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #ff2222;
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+    }
+
+    .filter-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .courses-list {
+      margin-top: 20px;
+    }
+
+    .course-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 15px;
+      align-items: center;
+      border-left: 4px solid #00d4ff;
+      transition: all 0.3s;
+    }
+
+    .course-card:hover {
+      background: rgba(255,255,255,0.08);
+      transform: translateX(5px);
+    }
+
+    .course-card.full {
+      border-left-color: #ff4444;
+      opacity: 0.7;
+    }
+
+    .course-info h3 {
+      color: #fff;
+      margin-bottom: 8px;
+      font-size: 1.1em;
+    }
+
+    .course-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      color: #888;
+      font-size: 0.9em;
+    }
+
+    .course-meta span {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .availability {
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.9em;
+    }
+
+    .availability.available {
+      background: rgba(68, 255, 68, 0.2);
+      color: #44ff44;
+    }
+
+    .availability.full {
+      background: rgba(255, 68, 68, 0.2);
+      color: #ff4444;
+    }
+
+    .course-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .course-actions .btn {
+      padding: 8px 16px;
+      font-size: 0.9em;
+    }
+
+    .instructions {
+      background: rgba(0, 212, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .instructions h3 {
+      color: #00d4ff;
+      margin-bottom: 15px;
+    }
+
+    .instructions ol {
+      padding-left: 20px;
+    }
+
+    .instructions li {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .instructions code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #00d4ff;
+    }
+
+    .log-container {
+      background: #0d1117;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .log-entry {
+      font-family: monospace;
+      font-size: 0.9em;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      gap: 10px;
+    }
+
+    .log-entry .time {
+      color: #666;
+      min-width: 80px;
+    }
+
+    .log-entry.success {
+      color: #44ff44;
+    }
+
+    .log-entry.error {
+      color: #ff4444;
+    }
+
+    .log-entry.info {
+      color: #00d4ff;
+    }
+
+    .log-entry.warning {
+      color: #ffaa00;
+    }
+
+    .active-jobs {
+      margin-top: 20px;
+    }
+
+    .job-card {
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      border-left: 4px solid #ffaa00;
+    }
+
+    .job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .job-stats {
+      display: flex;
+      gap: 20px;
+      color: #888;
+      font-size: 0.9em;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #00d4ff;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #1a1a2e;
+      border-radius: 16px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 1.5em;
+      cursor: pointer;
+    }
+
+    .alert {
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .alert-success {
+      background: rgba(68, 255, 68, 0.2);
+      border: 1px solid #44ff44;
+      color: #44ff44;
+    }
+
+    .alert-error {
+      background: rgba(255, 68, 68, 0.2);
+      border: 1px solid #ff4444;
+      color: #ff4444;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 768px) {
+      .course-card {
+        grid-template-columns: 1fr;
+      }
+      
+      .course-actions {
+        flex-direction: row;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🏐 HSP-Bot</h1>
+      <p>Automatische Kursanmeldung für den Hochschulsport</p>
+    </header>
+
+    <div class="status-bar">
+      <div class="status-item">
+        <div class="status-dot" id="wsStatus"></div>
+        <span id="wsStatusText">Verbinde...</span>
+      </div>
+      <div class="status-item">
+        <span>👤</span>
+        <span id="userStatus">Nicht angemeldet</span>
+      </div>
+      <div class="status-item">
+        <span>🔑</span>
+        <span id="tokenStatus">-</span>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="courses">🔍 Kurse suchen</button>
+      <button class="tab" data-tab="register">📝 Anmeldung</button>
+      <button class="tab" data-tab="auth">🔑 Auth-Daten</button>
+    </div>
+
+    <!-- Kurse suchen Panel -->
+    <div class="panel active" id="panel-courses">
+      <h2>🔍 Kurse suchen</h2>
+      
+      <div class="filter-row">
+        <div class="form-group">
+          <label>Zeitraum (Tage)</label>
+          <input type="number" id="filterDays" value="8" min="1" max="30">
+        </div>
+        <div class="form-group">
+          <label>Level</label>
+          <select id="filterLevel">
+            <option value="">Alle</option>
+            <option value="1">Level 1</option>
+            <option value="2">Level 2</option>
+            <option value="3">Level 3</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Min. freie Plätze</label>
+          <input type="number" id="filterAvailable" value="0" min="0">
+        </div>
+        <div class="form-group" style="display: flex; align-items: flex-end;">
+          <button class="btn btn-primary" id="searchBtn">🔍 Suchen</button>
+        </div>
+      </div>
+
+      <div id="coursesLoading" class="hidden">
+        <span class="spinner"></span> Lade Kurse...
+      </div>
+
+      <div class="courses-list" id="coursesList"></div>
+    </div>
+
+    <!-- Anmeldung Panel -->
+    <div class="panel" id="panel-register">
+      <h2>📝 Kurs-Anmeldung</h2>
+      
+      <div class="form-group">
+        <label>Booking ID</label>
+        <input type="number" id="bookingId" placeholder="z.B. 36432">
+      </div>
+
+      <div class="filter-row">
+        <div class="form-group">
+          <label>Modus</label>
+          <select id="registerMode">
+            <option value="single">Einmalige Anmeldung</option>
+            <option value="polling">Wiederholend (Polling)</option>
+          </select>
+        </div>
+        <div class="form-group" id="intervalGroup">
+          <label>Intervall (Millisekunden)</label>
+          <input type="number" id="intervalSeconds" value="1000" min="100" step="100">
+        </div>
+        <div class="form-group" id="maxAttemptsGroup">
+          <label>Max. Versuche (leer = unbegrenzt)</label>
+          <input type="number" id="maxAttempts" placeholder="z.B. 20" min="1">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="registerBtn">🚀 Anmeldung starten</button>
+
+      <div class="active-jobs" id="activeJobs"></div>
+
+      <div class="log-container" id="logContainer">
+        <div class="log-entry info">
+          <span class="time">--:--:--</span>
+          <span>Bereit für Anmeldungen...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auth-Daten Panel -->
+    <div class="panel" id="panel-auth">
+      <h2>🔑 Authentifizierungsdaten importieren</h2>
+
+      <div class="instructions">
+        <h3>📋 Anleitung zum Abrufen der Auth-Daten</h3>
+        <ol>
+          <li>Öffne die <a href="https://buchung.hssp-muenster.de/" target="_blank" style="color: #00d4ff;">HSP-Website</a> und melde dich an</li>
+          <li>Drücke <code>F12</code> um die Entwickler-Tools zu öffnen</li>
+          <li>Wechsle zum Tab <code>Console</code></li>
+          <li>Gib folgenden Befehl ein und drücke Enter:
+            <br><code>localStorage.getItem("delcom_auth")</code>
+          </li>
+          <li>Kopiere die komplette Ausgabe (mit Anführungszeichen)</li>
+          <li>Füge sie unten in das Textfeld ein</li>
+        </ol>
+      </div>
+
+      <div class="form-group">
+        <label>Auth-Daten (JSON)</label>
+        <textarea id="authDataInput" placeholder='Hier den kopierten Text einfügen...'></textarea>
+      </div>
+
+      <button class="btn btn-primary" id="importAuthBtn">💾 Importieren</button>
+
+      <div id="authResult" class="hidden"></div>
+    </div>
+  </div>
+
+  <!-- Polling Modal -->
+  <div class="modal" id="pollingModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🔄 Polling-Anmeldung</h3>
+        <button class="modal-close" onclick="closePollingModal()">×</button>
+      </div>
+      <p>Wähle die Einstellungen für die wiederholte Anmeldung:</p>
+      <div class="form-group">
+        <label>Intervall (Millisekunden)</label>
+        <input type="number" id="modalInterval" value="1000" min="100" step="100">
+      </div>
+      <div class="form-group">
+        <label>Max. Versuche (leer = unbegrenzt)</label>
+        <input type="number" id="modalMaxAttempts" placeholder="z.B. 20">
+      </div>
+      <input type="hidden" id="modalBookingId">
+      <button class="btn btn-primary" onclick="startPollingFromModal()">🚀 Starten</button>
+    </div>
+  </div>
+
+  <script>
+    // WebSocket Verbindung
+    let ws = null;
+    let activeJobs = new Map();
+
+    function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+      ws.onopen = () => {
+        document.getElementById('wsStatus').classList.add('connected');
+        document.getElementById('wsStatusText').textContent = 'Verbunden';
+      };
+
+      ws.onclose = () => {
+        document.getElementById('wsStatus').classList.remove('connected');
+        document.getElementById('wsStatusText').textContent = 'Getrennt';
+        setTimeout(connectWebSocket, 3000);
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        handleWebSocketMessage(data);
+      };
+    }
+
+    function handleWebSocketMessage(data) {
+      const logContainer = document.getElementById('logContainer');
+      const time = new Date().toLocaleTimeString('de-DE');
+
+      switch (data.type) {
+        case 'jobStarted':
+          addLog('info', `Job gestartet: Booking ${data.bookingId}, Intervall: ${data.intervalSeconds}s`);
+          activeJobs.set(data.jobId, {
+            bookingId: data.bookingId,
+            attempts: 0,
+            intervalSeconds: data.intervalSeconds,
+            maxAttempts: data.maxAttempts
+          });
+          renderActiveJobs();
+          break;
+
+        case 'attempt':
+          const type = data.success ? 'success' : (data.rateLimited ? 'warning' : 'error');
+          addLog(type, `Versuch ${data.attempt}: ${data.message}`);
+          if (activeJobs.has(data.jobId)) {
+            activeJobs.get(data.jobId).attempts = data.attempt;
+            renderActiveJobs();
+          }
+          break;
+
+        case 'success':
+          const successMsg = data.isWaitlist ? `⚠️ Warteliste: ${data.message}` : `✅ ${data.message}`;
+          addLog(data.isWaitlist ? 'warning' : 'success', successMsg);
+          if (data.fullResponse) {
+            addLog('info', `Server: ${JSON.stringify(data.fullResponse)}`);
+          }
+          break;
+
+        case 'jobCompleted':
+          addLog(data.success ? 'success' : 'info', 
+            `Job beendet nach ${data.totalAttempts} Versuchen: ${data.success ? 'Erfolgreich!' : data.message}`);
+          activeJobs.delete(data.jobId);
+          renderActiveJobs();
+          break;
+
+        case 'jobStopped':
+          addLog('info', `Job gestoppt nach ${data.totalAttempts} Versuchen`);
+          activeJobs.delete(data.jobId);
+          renderActiveJobs();
+          break;
+
+        case 'error':
+          addLog('error', data.message);
+          break;
+      }
+    }
+
+    function addLog(type, message) {
+      const logContainer = document.getElementById('logContainer');
+      const time = new Date().toLocaleTimeString('de-DE');
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.innerHTML = `<span class="time">${time}</span><span>${message}</span>`;
+      logContainer.insertBefore(entry, logContainer.firstChild);
+    }
+
+    function renderActiveJobs() {
+      const container = document.getElementById('activeJobs');
+      if (activeJobs.size === 0) {
+        container.innerHTML = '';
+        return;
+      }
+
+      let html = '<h3 style="margin-bottom: 15px;">🔄 Aktive Jobs</h3>';
+      activeJobs.forEach((job, jobId) => {
+        html += `
+          <div class="job-card">
+            <div class="job-header">
+              <div>
+                <strong>Booking ${job.bookingId}</strong>
+                <span class="spinner" style="margin-left: 10px;"></span>
+              </div>
+              <button class="btn btn-danger" onclick="stopJob('${jobId}')">⏹ Stoppen</button>
+            </div>
+            <div class="job-stats">
+              <span>Versuche: ${job.attempts}</span>
+              <span>Intervall: ${job.intervalSeconds}ms</span>
+              <span>Max: ${job.maxAttempts || 'unbegrenzt'}</span>
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    function stopJob(jobId) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'stopPolling', jobId }));
+      }
+    }
+
+    // Tab Navigation
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
+      });
+    });
+
+    // Status laden
+    async function loadStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+
+        if (data.authenticated && data.member) {
+          document.getElementById('userStatus').textContent = 
+            data.member.memberName || data.member.memberEmail || `ID: ${data.member.memberId}`;
+        }
+
+        if (data.tokenInfo) {
+          document.getElementById('tokenStatus').textContent = 
+            data.tokenInfo.isValid ? `Gültig (${data.tokenInfo.remainingText})` : 'Abgelaufen';
+        }
+      } catch (error) {
+        console.error('Status laden fehlgeschlagen:', error);
+      }
+    }
+
+    // Kurse suchen
+    document.getElementById('searchBtn').addEventListener('click', async () => {
+      const days = document.getElementById('filterDays').value;
+      const level = document.getElementById('filterLevel').value;
+      const minAvailable = document.getElementById('filterAvailable').value;
+
+      document.getElementById('coursesLoading').classList.remove('hidden');
+      document.getElementById('coursesList').innerHTML = '';
+
+      try {
+        const params = new URLSearchParams({ days });
+        if (level) params.append('level', level);
+        if (minAvailable > 0) params.append('minAvailable', minAvailable);
+
+        const res = await fetch(`/api/courses?${params}`);
+        const data = await res.json();
+
+        renderCourses(data.courses);
+      } catch (error) {
+        document.getElementById('coursesList').innerHTML = 
+          `<div class="alert alert-error">Fehler: ${error.message}</div>`;
+      } finally {
+        document.getElementById('coursesLoading').classList.add('hidden');
+      }
+    });
+
+    function renderCourses(courses) {
+      const container = document.getElementById('coursesList');
+      
+      if (courses.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #888; padding: 40px;">Keine Kurse gefunden</p>';
+        return;
+      }
+
+      const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+      
+      let html = '';
+      courses.forEach(course => {
+        const date = new Date(course.startDate);
+        const dayName = days[date.getUTCDay()];
+        const time = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = date.toLocaleDateString('de-DE');
+        const isFull = course.available <= 0;
+
+        html += `
+          <div class="course-card ${isFull ? 'full' : ''}">
+            <div class="course-info">
+              <h3>${course.description}</h3>
+              <div class="course-meta">
+                <span>📅 ${dayName}, ${dateStr}</span>
+                <span>🕐 ${time} Uhr</span>
+                <span>📍 ${course.location}</span>
+                <span>🎫 ID: ${course.id}</span>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <span class="availability ${isFull ? 'full' : 'available'}">
+                ${isFull ? '❌ Voll' : `✅ ${course.available} frei`}
+              </span>
+              <div class="course-actions">
+                <button class="btn btn-primary" onclick="quickRegister(${course.id})">
+                  🎯 Anmelden
+                </button>
+                <button class="btn btn-secondary" onclick="openPollingModal(${course.id})">
+                  🔄 Polling
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    // Schnelle Anmeldung
+    async function quickRegister(bookingId) {
+      addLog('info', `Starte Anmeldung für Booking ${bookingId}...`);
+      
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId })
+        });
+
+        const data = await res.json();
+        
+        if (data.isWaitlist) {
+          addLog('warning', `⚠️ Auf Warteliste gesetzt: ${data.message}`);
+          if (data.fullResponse) {
+            addLog('info', `Server: ${JSON.stringify(data.fullResponse)}`);
+          }
+          alert(`⚠️ Warteliste: ${data.message}`);
+        } else if (data.success) {
+          addLog('success', `✅ Erfolgreich für Kurs ${bookingId} angemeldet!`);
+          if (data.fullResponse) {
+            addLog('info', `Server: ${JSON.stringify(data.fullResponse)}`);
+          }
+          alert('✅ Erfolgreich angemeldet!');
+        } else {
+          addLog('error', `❌ ${data.message}`);
+          if (data.fullResponse) {
+            addLog('info', `Server: ${JSON.stringify(data.fullResponse)}`);
+          }
+          alert(`❌ ${data.message}`);
+        }
+      } catch (error) {
+        addLog('error', error.message);
+        alert(`Fehler: ${error.message}`);
+      }
+    }
+
+    // Polling Modal
+    function openPollingModal(bookingId) {
+      document.getElementById('modalBookingId').value = bookingId;
+      document.getElementById('pollingModal').classList.add('active');
+    }
+
+    function closePollingModal() {
+      document.getElementById('pollingModal').classList.remove('active');
+    }
+
+    function startPollingFromModal() {
+      const bookingId = document.getElementById('modalBookingId').value;
+      const intervalSeconds = parseInt(document.getElementById('modalInterval').value) || 60;
+      const maxAttempts = document.getElementById('modalMaxAttempts').value 
+        ? parseInt(document.getElementById('modalMaxAttempts').value) 
+        : null;
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'startPolling',
+          bookingId,
+          intervalSeconds: intervalSeconds,  // Bereits in Millisekunden
+          maxAttempts
+        }));
+      }
+
+      closePollingModal();
+      
+      // Wechsle zum Anmeldung-Tab
+      document.querySelector('[data-tab="register"]').click();
+    }
+
+    // Register Mode Toggle
+    document.getElementById('registerMode').addEventListener('change', (e) => {
+      const isPolling = e.target.value === 'polling';
+      document.getElementById('intervalGroup').style.display = isPolling ? 'block' : 'none';
+      document.getElementById('maxAttemptsGroup').style.display = isPolling ? 'block' : 'none';
+    });
+
+    // Manueller Register Button
+    document.getElementById('registerBtn').addEventListener('click', async () => {
+      const bookingId = document.getElementById('bookingId').value;
+      const mode = document.getElementById('registerMode').value;
+
+      if (!bookingId) {
+        alert('Bitte Booking ID eingeben');
+        return;
+      }
+
+      if (mode === 'single') {
+        await quickRegister(bookingId);
+      } else {
+        const intervalSeconds = parseInt(document.getElementById('intervalSeconds').value) || 1000;
+        const maxAttempts = document.getElementById('maxAttempts').value 
+          ? parseInt(document.getElementById('maxAttempts').value) 
+          : null;
+
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'startPolling',
+            bookingId,
+            intervalSeconds: intervalSeconds,  // Bereits in Millisekunden
+            maxAttempts
+          }));
+        }
+      }
+    });
+
+    // Auth Import
+    document.getElementById('importAuthBtn').addEventListener('click', async () => {
+      const input = document.getElementById('authDataInput').value.trim();
+      const resultDiv = document.getElementById('authResult');
+
+      if (!input) {
+        resultDiv.className = 'alert alert-error';
+        resultDiv.textContent = 'Bitte Auth-Daten einfügen';
+        resultDiv.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        // Parse den Input (kann in Anführungszeichen sein)
+        let authData;
+        if (input.startsWith('"') && input.endsWith('"')) {
+          authData = JSON.parse(JSON.parse(input));
+        } else {
+          authData = JSON.parse(input);
+        }
+
+        // Korrigiere doppelt escapte Strings (z.B. userAgents-Feld)
+        const jsonStr = JSON.stringify(authData);
+        const fixedStr = jsonStr.replace(/\\\\/g, '\\').replace(/\\"\[/g, '[').replace(/\]\\"/g, ']');
+        try {
+          authData = JSON.parse(fixedStr);
+        } catch {
+          // Falls Korrektur fehlschlägt, nutze Original
+        }
+
+        const res = await fetch('/api/auth/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(authData)
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          resultDiv.className = 'alert alert-success';
+          resultDiv.innerHTML = `
+            ✅ Import erfolgreich!<br>
+            Name: ${data.member.name}<br>
+            Email: ${data.member.email}<br>
+            ID: ${data.member.id}
+          `;
+          loadStatus();
+        } else {
+          resultDiv.className = 'alert alert-error';
+          resultDiv.textContent = `❌ ${data.error}`;
+        }
+      } catch (error) {
+        resultDiv.className = 'alert alert-error';
+        resultDiv.textContent = `❌ Fehler: ${error.message}. Bitte prüfe das Format der Daten.`;
+      }
+
+      resultDiv.classList.remove('hidden');
+    });
+
+    // Initial laden
+    document.getElementById('intervalGroup').style.display = 'none';
+    document.getElementById('maxAttemptsGroup').style.display = 'none';
+
+    connectWebSocket();
+    loadStatus();
+
+    // Kurse initial laden
+    document.getElementById('searchBtn').click();
+  </script>
+</body>
+</html>
