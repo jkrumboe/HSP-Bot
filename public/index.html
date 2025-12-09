@@ -526,8 +526,8 @@
           </select>
         </div>
         <div class="form-group" id="intervalGroup">
-          <label>Intervall (Sekunden)</label>
-          <input type="number" id="intervalSeconds" value="60" min="10">
+          <label>Intervall (Millisekunden)</label>
+          <input type="number" id="intervalSeconds" value="1000" min="100" step="100">
         </div>
         <div class="form-group" id="maxAttemptsGroup">
           <label>Max. Versuche (leer = unbegrenzt)</label>
@@ -585,8 +585,8 @@
       </div>
       <p>Wähle die Einstellungen für die wiederholte Anmeldung:</p>
       <div class="form-group">
-        <label>Intervall (Sekunden)</label>
-        <input type="number" id="modalInterval" value="60" min="10">
+        <label>Intervall (Millisekunden)</label>
+        <input type="number" id="modalInterval" value="1000" min="100" step="100">
       </div>
       <div class="form-group">
         <label>Max. Versuche (leer = unbegrenzt)</label>
@@ -649,7 +649,11 @@
           break;
 
         case 'success':
-          addLog('success', `✅ ${data.message}`);
+          const successMsg = data.isWaitlist ? `⚠️ Warteliste: ${data.message}` : `✅ ${data.message}`;
+          addLog(data.isWaitlist ? 'warning' : 'success', successMsg);
+          if (data.fullResponse) {
+            addLog('info', `Server: ${JSON.stringify(data.fullResponse)}`);
+          }
           break;
 
         case 'jobCompleted':
@@ -700,7 +704,7 @@
             </div>
             <div class="job-stats">
               <span>Versuche: ${job.attempts}</span>
-              <span>Intervall: ${job.intervalSeconds}s</span>
+              <span>Intervall: ${job.intervalSeconds}ms</span>
               <span>Max: ${job.maxAttempts || 'unbegrenzt'}</span>
             </div>
           </div>
@@ -833,11 +837,23 @@
 
         const data = await res.json();
         
-        if (data.success) {
+        if (data.isWaitlist) {
+          addLog('warning', `⚠️ Auf Warteliste gesetzt: ${data.message}`);
+          if (data.fullResponse) {
+            addLog('info', `Server: ${JSON.stringify(data.fullResponse)}`);
+          }
+          alert(`⚠️ Warteliste: ${data.message}`);
+        } else if (data.success) {
           addLog('success', `✅ Erfolgreich für Kurs ${bookingId} angemeldet!`);
+          if (data.fullResponse) {
+            addLog('info', `Server: ${JSON.stringify(data.fullResponse)}`);
+          }
           alert('✅ Erfolgreich angemeldet!');
         } else {
           addLog('error', `❌ ${data.message}`);
+          if (data.fullResponse) {
+            addLog('info', `Server: ${JSON.stringify(data.fullResponse)}`);
+          }
           alert(`❌ ${data.message}`);
         }
       } catch (error) {
@@ -867,7 +883,7 @@
         ws.send(JSON.stringify({
           type: 'startPolling',
           bookingId,
-          intervalSeconds,
+          intervalSeconds: intervalSeconds,  // Bereits in Millisekunden
           maxAttempts
         }));
       }
@@ -898,7 +914,7 @@
       if (mode === 'single') {
         await quickRegister(bookingId);
       } else {
-        const intervalSeconds = parseInt(document.getElementById('intervalSeconds').value) || 60;
+        const intervalSeconds = parseInt(document.getElementById('intervalSeconds').value) || 1000;
         const maxAttempts = document.getElementById('maxAttempts').value 
           ? parseInt(document.getElementById('maxAttempts').value) 
           : null;
@@ -907,7 +923,7 @@
           ws.send(JSON.stringify({
             type: 'startPolling',
             bookingId,
-            intervalSeconds,
+            intervalSeconds: intervalSeconds,  // Bereits in Millisekunden
             maxAttempts
           }));
         }
@@ -933,6 +949,15 @@
           authData = JSON.parse(JSON.parse(input));
         } else {
           authData = JSON.parse(input);
+        }
+
+        // Korrigiere doppelt escapte Strings (z.B. userAgents-Feld)
+        const jsonStr = JSON.stringify(authData);
+        const fixedStr = jsonStr.replace(/\\\\/g, '\\').replace(/\\"\[/g, '[').replace(/\]\\"/g, ']');
+        try {
+          authData = JSON.parse(fixedStr);
+        } catch {
+          // Falls Korrektur fehlschlägt, nutze Original
         }
 
         const res = await fetch('/api/auth/import', {

@@ -86,11 +86,23 @@ async function registerCourse(memberId, bookingId) {
     }
 
     if (res.status === 201) {
-      console.log('✅ Erfolgreich angemeldet!');
-      console.log('- Participation ID:', responseData.id);
-      console.log('- Claim Code:', responseData.claimCode);
-      rateLimitStats.successfulRegistrations++;
-      return { success: true, data: responseData };
+      // Prüfe ob Warteliste oder echte Anmeldung anhand status-Feld
+      // status: 1 = Angemeldet, status: 3 = Warteliste
+      const isWaitlist = responseData.status === 3;
+      
+      if (isWaitlist) {
+        console.log('⚠️  Auf Warteliste gesetzt!');
+        console.log('- Participation ID:', responseData.id);
+        console.log('- Status:', responseData.status);
+      } else {
+        console.log('✅ Erfolgreich angemeldet!');
+        console.log('- Participation ID:', responseData.id);
+        console.log('- Claim Code:', responseData.claimCode);
+        console.log('- Status:', responseData.status);
+        rateLimitStats.successfulRegistrations++;
+      }
+      console.log('\n📄 Server-Antwort:', JSON.stringify(responseData));
+      return { success: !isWaitlist, isWaitlist, data: responseData };
     } else if (res.status === 403) {
       const errorMsg = responseData.message || 'Bereits angemeldet';
       console.log('⚠️ ', errorMsg);
@@ -285,11 +297,11 @@ if (args.length > 0) {
   const maxAttempts = maxAttemptsStr ? parseInt(maxAttemptsStr) : null;
 
   if (interval) {
-    // Polling-Modus - Konvertiere Sekunden zu Millisekunden
+    // Polling-Modus - Intervall ist in Millisekunden
     registerCoursePolling(
       memberId ? parseInt(memberId) : null, 
       parseInt(bookingId), 
-      interval * 1000,  // Konvertiere zu Millisekunden
+      interval,  // Bereits in Millisekunden
       maxAttempts
     ).catch(console.error);
   } else {
@@ -309,12 +321,12 @@ if (args.length > 0) {
   console.log('   Beispiel: node register-course-auto.js 36432\n');
   
   console.log('2. Regelmäßige Anmeldungsversuche (Polling):');
-  console.log('   node register-course-auto.js [memberId] <bookingId> <intervalSeconds> [maxAttempts]');
-  console.log('   Beispiel: node register-course-auto.js 36432 60');
-  console.log('   → Versucht alle 60 Sekunden zu buchen\n');
+  console.log('   node register-course-auto.js [memberId] <bookingId> <intervalMs> [maxAttempts]');
+  console.log('   Beispiel: node register-course-auto.js 36432 1000');
+  console.log('   → Versucht alle 1000ms (1 Sekunde) zu buchen\n');
   
   console.log('3. Mit Limit der Versuche:');
-  console.log('   node register-course-auto.js 36432 30 20');
-  console.log('   → Versucht alle 30 Sekunden, max. 20 Versuche\n');
+  console.log('   node register-course-auto.js 36432 500 20');
+  console.log('   → Versucht alle 500ms, max. 20 Versuche\n');
 }
 

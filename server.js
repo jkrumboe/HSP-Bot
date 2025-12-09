@@ -55,7 +55,16 @@ app.get('/api/status', (req, res) => {
 // Auth-Daten importieren
 app.post('/api/auth/import', async (req, res) => {
   try {
-    const authData = req.body;
+    let authData = req.body;
+
+    // Korrigiere doppelt escapte Strings (z.B. im userAgents-Feld)
+    const jsonStr = JSON.stringify(authData);
+    const fixedStr = jsonStr.replace(/\\\\/g, '\\').replace(/\\"\[/g, '[').replace(/\]\\"(,|})/g, ']$1');
+    try {
+      authData = JSON.parse(fixedStr);
+    } catch {
+      // Falls Korrektur fehlschlägt, nutze Original
+    }
 
     if (!authData || !authData.tokenResponse || !authData.member) {
       return res.status(400).json({ error: 'Ungültige Auth-Daten. Bitte kompletten JSON-Inhalt einfügen.' });
@@ -203,22 +212,31 @@ app.post('/api/register', async (req, res) => {
     }
 
     if (response.status === 201) {
+      // Prüfe ob Warteliste oder echte Anmeldung anhand status-Feld
+      // status: 1 = Angemeldet, status: 3 = Warteliste
+      const isWaitlist = responseData.status === 3;
+      
       res.json({
-        success: true,
-        message: 'Erfolgreich angemeldet!',
-        data: responseData
+        success: !isWaitlist,
+        isWaitlist: isWaitlist,
+        message: isWaitlist ? 'Auf Warteliste gesetzt' : 'Erfolgreich angemeldet!',
+        participationStatus: responseData.status,
+        data: responseData,
+        fullResponse: responseData
       });
     } else if (response.status === 403) {
       res.json({
         success: false,
         message: responseData.message || 'Bereits angemeldet oder nicht erlaubt',
-        status: 403
+        status: 403,
+        fullResponse: responseData
       });
     } else {
       res.json({
         success: false,
         message: responseData.message || 'Anmeldung fehlgeschlagen',
-        status: response.status
+        status: response.status,
+        fullResponse: responseData
       });
     }
   } catch (error) {
@@ -300,7 +318,7 @@ wss.on('connection', (ws) => {
 });
 
 async function handlePollingStart(ws, data) {
-  const { bookingId, intervalSeconds = 60, maxAttempts } = data;
+  const { bookingId, intervalSeconds = 1000, maxAttempts } = data;
   const jobId = `${bookingId}-${Date.now()}`;
 
   const token = await getValidToken();
@@ -340,7 +358,7 @@ async function handlePollingStart(ws, data) {
   // Polling Interval
   job.interval = setInterval(async () => {
     await attemptRegistration(jobId, job, memberInfo.memberId);
-  }, intervalSeconds * 1000);
+  }, intervalSeconds);
 
   activePollingJobs.set(jobId, job);
 }
@@ -387,24 +405,33 @@ async function attemptRegistration(jobId, job, memberId) {
     }
 
     if (response.status === 201) {
+      // Prüfe ob Warteliste oder echte Anmeldung anhand status-Feld
+      // status: 1 = Angemeldet, status: 3 = Warteliste
+      const isWaitlist = responseData.status === 3;
+
       job.ws.send(JSON.stringify({
         type: 'success',
         jobId,
         attempt: job.attempts,
-        message: 'Erfolgreich angemeldet!',
-        data: responseData
+        isWaitlist: isWaitlist,
+        message: isWaitlist ? 'Auf Warteliste gesetzt' : 'Erfolgreich angemeldet!',
+        participationStatus: responseData.status,
+        data: responseData,
+        fullResponse: responseData
       }));
       
-      // Job beenden bei Erfolg
-      clearInterval(job.interval);
-      activePollingJobs.delete(jobId);
-      
-      job.ws.send(JSON.stringify({
-        type: 'jobCompleted',
-        jobId,
-        success: true,
-        totalAttempts: job.attempts
-      }));
+      // Job nur bei echter Anmeldung beenden, bei Warteliste weiter versuchen
+      if (!isWaitlist) {
+        clearInterval(job.interval);
+        activePollingJobs.delete(jobId);
+        
+        job.ws.send(JSON.stringify({
+          type: 'jobCompleted',
+          jobId,
+          success: true,
+          totalAttempts: job.attempts
+        }));
+      }
     } else if (response.status === 429) {
       job.ws.send(JSON.stringify({
         type: 'attempt',
