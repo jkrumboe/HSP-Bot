@@ -39,16 +39,21 @@ async function fetchBookings({ pages = 2, limit = 50, filter }) {
   return results.flat();
 }
 
-function filterActivities(activities, { descriptionIncludes = [], weekday, hour }) {
+// Logik: Volleyball heute
+function findTargetCourses(activities) {
+  const today = new Date();
+  const todayDay = today.getDate();
+  const todayMonth = today.getMonth();
+  const todayYear = today.getFullYear();
+
   return activities.filter(a => {
-    const matchesDescription =
-      descriptionIncludes.length === 0 || descriptionIncludes.some(text => a.description.includes(text));
-
     const date = new Date(a.startDate);
-    const matchesWeekday = weekday === undefined ? true : date.getUTCDay() === weekday;
-    const matchesHour = hour === undefined ? true : date.getUTCHours() === hour;
-
-    return matchesDescription && matchesWeekday && matchesHour;
+    
+    return (
+      date.getDate() === todayDay &&
+      date.getMonth() === todayMonth &&
+      date.getFullYear() === todayYear
+    );
   });
 }
 
@@ -95,9 +100,8 @@ async function main() {
 
   console.log(`\nGefunden: ${filtered.length} relevante Einträge (von ${bookings.length} geladen)\n`);
 
-  for (const a of filtered) {
-    console.log(`id=${a.id}, desc=${a.description}, start=${a.startDate}, avail=${a.availableParticipantCount}`);
-  }
+  console.log("\nHeutige Kurse:");
+  console.log(target);
 }
 
 main();
