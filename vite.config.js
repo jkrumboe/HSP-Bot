@@ -1,12 +1,14 @@
 import { defineConfig } from 'vite'
 
+const backendPort = process.env.PORT || 3000;
+
 export default defineConfig({
   server: {
     host: '0.0.0.0', // Listen on all interfaces for Docker
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: `http://localhost:${backendPort}`,
         changeOrigin: true
       }
     },
