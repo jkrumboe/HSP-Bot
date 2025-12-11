@@ -52,6 +52,21 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// Get locations data
+app.get('/api/locations', (req, res) => {
+  try {
+    const locationsPath = path.join(__dirname, 'locations.json');
+    if (!fs.existsSync(locationsPath)) {
+      return res.status(404).json({ error: 'Locations data not found' });
+    }
+    const locations = JSON.parse(fs.readFileSync(locationsPath, 'utf8'));
+    res.json(locations);
+  } catch (error) {
+    console.error('Error loading locations:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Auth-Daten importieren
 app.post('/api/auth/import', async (req, res) => {
   try {
@@ -216,6 +231,7 @@ app.get('/api/courses', async (req, res) => {
 
     // Fetch location names from products
     let locationNames = {};
+    let productLocationIds = {};
     if (courses.length > 0) {
       try {
         const productIds = [...new Set(courses.map(c => c.productId).filter(id => id))];
@@ -231,6 +247,9 @@ app.get('/api/courses', async (req, res) => {
             const productsData = await productsRes.json();
             productsData.data?.forEach(product => {
               locationNames[product.id] = product.description;
+              if (product.locationId) {
+                productLocationIds[product.id] = product.locationId;
+              }
             });
           }
         }
@@ -246,6 +265,7 @@ app.get('/api/courses', async (req, res) => {
       startDate: c.startDate,
       endDate: c.endDate,
       location: locationNames[c.productId] || c.location || 'Unbekannt',
+      locationId: productLocationIds[c.productId] || null,
       available: c.availableParticipantCount,
       maxParticipants: c.maxParticipantCount,
       status: c.status,
