@@ -399,6 +399,16 @@
       to { transform: rotate(360deg); }
     }
 
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    @keyframes flash {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; background: rgba(0, 212, 255, 0.1); }
+    }
+
     .modal {
       display: none;
       position: fixed;
@@ -659,6 +669,7 @@
       switch (data.type) {
         case 'jobStarted':
           addLog('info', `Job gestartet: Booking ${data.bookingId}, Intervall: ${data.intervalSeconds}s`);
+          isPolling = true;
           activeJobs.set(data.jobId, {
             bookingId: data.bookingId,
             attempts: 0,
@@ -689,12 +700,18 @@
           addLog(data.success ? 'success' : 'info', 
             `Job beendet nach ${data.totalAttempts} Versuchen: ${data.success ? 'Erfolgreich!' : data.message}`);
           activeJobs.delete(data.jobId);
+          isPolling = activeJobs.size > 0;
           renderActiveJobs();
+          // Refresh course list if successful booking (silent mode)
+          if (data.success) {
+            setTimeout(() => searchCourses(true), 1000);
+          }
           break;
 
         case 'jobStopped':
           addLog('info', `Job gestoppt nach ${data.totalAttempts} Versuchen`);
           activeJobs.delete(data.jobId);
+          isPolling = activeJobs.size > 0;
           renderActiveJobs();
           break;
 
@@ -779,13 +796,22 @@
     }
 
     // Kurse suchen
-    document.getElementById('searchBtn').addEventListener('click', async () => {
+    let autoRefreshInterval = null;
+    let isPolling = false;
+    let isRefreshing = false;
+
+    async function searchCourses(silent = false) {
       const days = document.getElementById('filterDays').value;
       const level = document.getElementById('filterLevel').value;
       const minAvailable = document.getElementById('filterAvailable').value;
 
-      document.getElementById('coursesLoading').classList.remove('hidden');
-      document.getElementById('coursesList').innerHTML = '';
+      // Only show loading and clear list on initial search, not on refresh
+      if (!silent) {
+        document.getElementById('coursesLoading').classList.remove('hidden');
+        document.getElementById('coursesList').innerHTML = '';
+      } else {
+        isRefreshing = true;
+      }
 
       try {
         const params = new URLSearchParams({ days });
@@ -795,25 +821,81 @@
         const res = await fetch(`/api/courses?${params}`);
         const data = await res.json();
 
-        renderCourses(data.courses);
+        renderCourses(data.courses, silent);
       } catch (error) {
-        document.getElementById('coursesList').innerHTML = 
-          `<div class="alert alert-error">Fehler: ${error.message}</div>`;
+        if (!silent) {
+          document.getElementById('coursesList').innerHTML = 
+            `<div class="alert alert-error">Fehler: ${error.message}</div>`;
+        }
       } finally {
         document.getElementById('coursesLoading').classList.add('hidden');
+        isRefreshing = false;
       }
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', async () => {
+      await searchCourses(false);
+      startAutoRefresh();
     });
 
-    function renderCourses(courses) {
+    // Auto-refresh every 30 seconds (at :00 and :30 of each minute)
+    function startAutoRefresh() {
+      // Clear existing interval
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+
+      // Calculate time until next 30-second mark
+      const now = new Date();
+      const seconds = now.getSeconds();
+      const msUntilNext30 = ((30 - (seconds % 30)) % 30) * 1000;
+
+      // Wait until next 30-second mark, then refresh every 30 seconds
+      setTimeout(() => {
+        // Do initial refresh
+        if (!isPolling) {
+          searchCourses(true);
+        }
+
+        // Set up interval for every 30 seconds
+        autoRefreshInterval = setInterval(() => {
+          if (!isPolling) {
+            searchCourses(true);
+          }
+        }, 30000);
+      }, msUntilNext30 || 30000);
+    }
+
+    function renderCourses(courses, silent = false) {
       const container = document.getElementById('coursesList');
       
-      if (courses.length === 0) {
+      if (courses.length === 0 && !silent) {
         container.innerHTML = '<p style="text-align: center; color: #888; padding: 40px;">Keine Kurse gefunden</p>';
         return;
       }
 
+      if (courses.length === 0 && silent) {
+        return; // Don't clear existing courses on silent refresh if no results
+      }
+
       const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
       
+      // If silent refresh, update existing cards instead of replacing all HTML
+      if (silent && container.children.length > 0) {
+        courses.forEach(course => {
+          const existingCard = container.querySelector(`[data-course-id="${course.id}"]`);
+          if (existingCard) {
+            updateCourseCard(existingCard, course);
+          } else {
+            // New course appeared, add it
+            const newCard = createCourseCard(course, days);
+            container.appendChild(newCard);
+          }
+        });
+        return;
+      }
+
+      // Initial render or explicit refresh
       let html = '';
       courses.forEach(course => {
         const date = new Date(course.startDate);
@@ -829,11 +911,11 @@
         const isBooked = course.userParticipation?.participationStatus === 1;
         const isWaiting = course.userParticipation?.participationStatus === 3;
         const cardClass = isBooked ? 'booked' : (isWaiting ? 'waiting' : (isFull ? 'full' : ''));
-        const statusBadge = isBooked ? '<span style="color: #44ff44; font-weight: bold;">✓ Angemeldet</span>' 
+        const statusBadge = isBooked ? '<span style="color: #44ff44; font-weight: bold;">Angemeldet</span>' 
                           : (isWaiting ? '<span style="color: #ffaa00; font-weight: bold;">Warteliste</span>' : '');
 
         html += `
-          <div class="course-card ${cardClass}">
+          <div class="course-card ${cardClass}" data-course-id="${course.id}">
             <div class="course-info">
               <h3>${course.description} ${statusBadge}</h3>
               <div class="course-meta">
@@ -845,15 +927,15 @@
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
-              <span class="availability ${isFull ? 'full' : 'available'}">
-                ${isFull ? 'Voll' : ` ${course.available} frei`}
+              <span class="availability ${isFull ? 'full' : 'available'}" data-available="${course.available}">
+                ${isFull ? 'Voll' : `${course.available} frei`}
               </span>
               <div class="course-actions">
                 <button class="btn btn-primary" onclick="quickRegister(${course.id})" ${isBooked || isWaiting ? 'disabled' : ''}>
-                  ${isBooked ? '✓ Angemeldet' : (isWaiting ? 'Warteliste' : (isFull ? 'Warteliste' : 'Anmelden'))}
+                  ${isBooked ? 'Angemeldet' : (isWaiting ? 'Warteliste' : (isFull ? 'Warteliste' : 'Anmelden'))}
                 </button>
                 <button class="btn btn-secondary" onclick="openPollingModal(${course.id})" ${isBooked || isWaiting ? 'disabled' : ''}>
-                  Polling
+                  🔄 Polling
                 </button>
               </div>
             </div>
@@ -862,6 +944,90 @@
       });
 
       container.innerHTML = html;
+    }
+
+    // Update existing course card without full re-render
+    function updateCourseCard(card, course) {
+      const availabilityEl = card.querySelector('.availability');
+      const oldAvailable = parseInt(availabilityEl.dataset.available) || 0;
+      const newAvailable = course.available;
+      const isFull = newAvailable <= 0;
+
+      // Update availability with animation if changed
+      if (oldAvailable !== newAvailable) {
+        availabilityEl.dataset.available = newAvailable;
+        availabilityEl.className = `availability ${isFull ? 'full' : 'available'}`;
+        availabilityEl.innerHTML = isFull ? 'Voll' : `${newAvailable} frei`;
+        
+        // Add pulse animation
+        availabilityEl.style.animation = 'pulse 0.5s ease-in-out';
+        setTimeout(() => {
+          availabilityEl.style.animation = '';
+        }, 500);
+      }
+
+      // Check current booking status from the card
+      const wasBooked = card.classList.contains('booked');
+      const wasWaiting = card.classList.contains('waiting');
+      const wasInAnyStatus = wasBooked || wasWaiting;
+
+      // Check new booking status
+      const isBooked = course.userParticipation?.participationStatus === 1;
+      const isWaiting = course.userParticipation?.participationStatus === 3;
+      const isInAnyStatus = isBooked || isWaiting;
+      
+      // Update if status changed in any direction
+      if (wasInAnyStatus !== isInAnyStatus || (isInAnyStatus && (wasBooked !== isBooked || wasWaiting !== isWaiting))) {
+        const buttons = card.querySelectorAll('button');
+        const primaryBtn = card.querySelector('.btn-primary');
+        const titleEl = card.querySelector('h3');
+        
+        if (isBooked) {
+          // Booked
+          card.className = 'course-card booked';
+          buttons.forEach(btn => btn.disabled = true);
+          if (primaryBtn) primaryBtn.textContent = 'Angemeldet';
+          // Update title badge
+          if (titleEl) {
+            const titleText = titleEl.textContent.split('<span')[0].trim();
+            const courseName = course.description;
+            titleEl.innerHTML = `${courseName} <span style="color: #44ff44; font-weight: bold;">Angemeldet</span>`;
+          }
+        } else if (isWaiting) {
+          // Waiting list
+          card.className = 'course-card waiting';
+          buttons.forEach(btn => btn.disabled = true);
+          if (primaryBtn) primaryBtn.textContent = '⏳ Warteliste';
+          // Update title badge
+          if (titleEl) {
+            const courseName = course.description;
+            titleEl.innerHTML = `${courseName} <span style="color: #ffaa00; font-weight: bold;">Warteliste</span>`;
+          }
+        } else {
+          // No longer booked/waiting (cancelled)
+          card.className = `course-card ${isFull ? 'full' : ''}`;
+          buttons.forEach(btn => btn.disabled = false);
+          if (primaryBtn) {
+            primaryBtn.textContent = isFull ? 'Warteliste' : 'Anmelden';
+          }
+          // Remove badge from title
+          if (titleEl) {
+            const courseName = course.description;
+            titleEl.textContent = courseName;
+          }
+        }
+        
+        // Add flash animation for any status change
+        card.style.animation = 'flash 0.5s ease-in-out';
+        setTimeout(() => {
+          card.style.animation = '';
+        }, 500);
+      }
+    }
+
+    function createCourseCard(course, days) {
+      // This would create a new card element, but for now we can skip since courses don't usually appear mid-session
+      return null;
     }
 
     // Schnelle Anmeldung
@@ -889,6 +1055,8 @@
             addLog('info', `Server: ${JSON.stringify(data.fullResponse)}`);
           }
           alert('✅ Erfolgreich angemeldet!');
+          // Refresh course list after successful booking (silent mode)
+          setTimeout(() => searchCourses(true), 1000);
         } else {
           addLog('error', `❌ ${data.message}`);
           if (data.fullResponse) {
