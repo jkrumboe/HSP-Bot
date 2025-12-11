@@ -957,7 +957,7 @@
       if (oldAvailable !== newAvailable) {
         availabilityEl.dataset.available = newAvailable;
         availabilityEl.className = `availability ${isFull ? 'full' : 'available'}`;
-        availabilityEl.innerHTML = isFull ? '❌ Voll' : `✅ ${newAvailable} frei`;
+        availabilityEl.innerHTML = isFull ? 'Voll' : `${newAvailable} frei`;
         
         // Add pulse animation
         availabilityEl.style.animation = 'pulse 0.5s ease-in-out';
