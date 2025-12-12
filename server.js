@@ -589,6 +589,6 @@ function handlePollingStop(ws, jobId) {
 
 // Server starten
 server.listen(PORT, () => {
-  console.log(`\n🚀 HSP-Bot GUI Server läuft auf http://localhost:${PORT}`);
+  console.log(`\n🚀 HSP-Bot Backend Server läuft auf http://localhost:${PORT}`);
   console.log(`📡 WebSocket bereit für Live-Updates\n`);
 });
