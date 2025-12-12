@@ -629,10 +629,8 @@
     let activeJobs = new Map();
 
     function connectWebSocket() {
-      // In development, connect to backend server directly
-      const wsUrl = window.location.hostname === 'localhost' 
-        ? 'ws://localhost:3000'
-        : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
       ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
