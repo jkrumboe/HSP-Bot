@@ -56,15 +56,21 @@ app.get('/api/status', (req, res) => {
 app.post('/api/auth/import', async (req, res) => {
   try {
     let authData = req.body;
+    const skipServerFix = authData._skipServerFix;
 
-    // Korrigiere doppelt escapte Strings (z.B. im userAgents-Feld)
-    const jsonStr = JSON.stringify(authData);
-    const fixedStr = jsonStr.replace(/\\\\/g, '\\').replace(/\\"\[/g, '[').replace(/\]\\"(,|})/g, ']$1');
-    try {
-      authData = JSON.parse(fixedStr);
-    } catch {
-      // Falls Korrektur fehlschlägt, nutze Original
+    if (!skipServerFix) {
+      // Korrigiere doppelt escapte Strings (z.B. im userAgents-Feld)
+      const jsonStr = JSON.stringify(authData);
+      const fixedStr = jsonStr.replace(/\\\\/g, '\\').replace(/\\"\[/g, '[').replace(/\]\\"(,|})/g, ']$1');
+      try {
+        authData = JSON.parse(fixedStr);
+      } catch {
+        // Falls Korrektur fehlschlägt, nutze Original
+      }
     }
+    
+    // Bereinige das interne Flag
+    if (authData._skipServerFix !== undefined) delete authData._skipServerFix;
 
     if (!authData || !authData.tokenResponse || !authData.member) {
       return res.status(400).json({ error: 'Ungültige Auth-Daten. Bitte kompletten JSON-Inhalt einfügen.' });
