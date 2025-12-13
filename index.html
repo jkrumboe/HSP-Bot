@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🏐 HSP-Bot - Kursanmeldung</title>
+  <title>🏐 Better-HSP - Kursanmeldung</title>
   <style>
     * {
       box-sizing: border-box;
@@ -73,7 +73,6 @@
     .tabs {
       display: flex;
       gap: 10px;
-      margin-bottom: 20px;
     }
 
     .tab {
@@ -99,7 +98,6 @@
 
     .panel {
       display: none;
-      background: rgba(255,255,255,0.03);
       border-radius: 16px;
       padding: 16px;
     }
@@ -115,7 +113,6 @@
     }
 
     .form-group {
-      margin-bottom: 20px;
     }
 
     label {
@@ -203,10 +200,24 @@
     }
 
     .filter-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 15px;
-      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      width: 100%;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .header-filter {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .header-filter h2 {
+      margin: 0;
     }
 
     .courses-list {
@@ -259,7 +270,7 @@
 
     .course-meta span {
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       gap: 5px;
     }
 
@@ -287,8 +298,24 @@
     }
 
     .course-actions .btn {
+      justify-content: center;
       padding: 8px 16px;
       font-size: 0.9em;
+    }
+
+    .btn-link {
+      background: none;
+      border: none;
+      color: #00d4ff;
+      cursor: pointer;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .btn-link:hover {
+      color: #00ffff;
+      text-decoration: underline;
     }
 
     .instructions {
@@ -399,6 +426,16 @@
       to { transform: rotate(360deg); }
     }
 
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    @keyframes flash {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; background: rgba(0, 212, 255, 0.1); }
+    }
+
     .modal {
       display: none;
       position: fixed;
@@ -462,12 +499,105 @@
     }
 
     @media (max-width: 768px) {
+      .container {
+        padding: 15px;
+      }
+
+      header h1 {
+        font-size: 1.8em;
+      }
+
+      header p {
+        font-size: 0.9em;
+      }
+
+      .header-filter {
+        gap: 15px;
+      }
+
+      .header-filter h2 {
+        font-size: 1.3em;
+      }
+
+      .tabs {
+        justify-content: center;
+      }
+
+      .filter-row {
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+      }
+
+      .filter-row .form-group {
+        width: 100%;
+      }
+
+      .filter-row input,
+      .filter-row select {
+        padding: 10px 12px;
+        font-size: 16px; /* Prevents zoom on iOS */
+      }
+
+      .filter-row label {
+        font-size: 0.9em;
+        margin-bottom: 6px;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 20px;
+        font-size: 1em;
+      }
+
       .course-card {
         grid-template-columns: 1fr;
+        padding: 15px;
+        gap: 12px;
       }
       
       .course-actions {
         flex-direction: row;
+        width: 100%;
+      }
+
+      .course-actions .btn {
+        flex: 1;
+      }
+
+      .course-meta {
+        font-size: 0.85em;
+        gap: 10px;
+      }
+
+      .tabs {
+        gap: 5px;
+      }
+
+      .tab {
+        padding: 10px 12px;
+        font-size: 0.9em;
+      }
+
+      .modal-content {
+        width: 90%;
+        max-width: 90%;
+        padding: 20px;
+      }
+
+      .status-bar {
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+      }
+
+      .status-item {
+        font-size: 0.9em;
+      }
+
+      input, select, textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
       }
     }
   </style>
@@ -475,7 +605,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>🏐 HSP-Bot</h1>
+      <h1>🏐 Bette-HSP</h1>
       <p>Automatische Kursanmeldung für den Hochschulsport</p>
     </header>
 
@@ -502,34 +632,31 @@
 
     <!-- Kurse suchen Panel -->
     <div class="panel active" id="panel-courses">
-      <h2>Kurse suchen</h2>
-      
-      <div class="filter-row">
-        <div class="form-group">
-          <label>Sportart</label>
-          <input list="sportsList" id="filterSport" placeholder="Tippen zum Suchen..." autocomplete="off">
-          <datalist id="sportsList"></datalist>
-          <input type="hidden" id="filterSportId">
-        </div>
-        <div class="form-group">
-          <label>Zeitraum (Tage)</label>
-          <input type="number" id="filterDays" value="8" min="1" max="30">
-        </div>
-        <div class="form-group">
-          <label>Level</label>
-          <select id="filterLevel">
-            <option value="">Alle</option>
-            <option value="1">Level 1</option>
-            <option value="2">Level 2</option>
-            <option value="3">Level 3</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Min. freie Plätze</label>
-          <input type="number" id="filterAvailable" value="0" min="0">
-        </div>
-        <div class="form-group" style="display: flex; align-items: flex-end;">
-          <button class="btn btn-primary" id="searchBtn">🔍 Suchen</button>
+
+      <div class="header-filter">
+        <h2>Kurse suchen</h2>
+        
+        <div class="filter-row">
+          <div class="form-group">
+            <label>Zeitraum (Tage)</label>
+            <input type="number" id="filterDays" value="8" min="1" max="30">
+          </div>
+          <div class="form-group">
+            <label>Level</label>
+            <select id="filterLevel">
+              <option value="">Alle</option>
+              <option value="1">Level 1</option>
+              <option value="2">Level 2</option>
+              <option value="3">Level 3</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Min. freie Plätze</label>
+            <input type="number" id="filterAvailable" value="0" min="0">
+          </div>
+          <div class="form-group" style="display: flex; align-items: flex-end;">
+            <button class="btn btn-primary" id="searchBtn">🔍 Suchen</button>
+          </div>
         </div>
       </div>
 
@@ -629,10 +756,118 @@
     </div>
   </div>
 
+  <!-- Map Service Selection Modal -->
+  <div class="modal" id="mapModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="mapModalTitle">Kartendienst wählen</h3>
+        <button class="modal-close" onclick="closeMapModal()">×</button>
+      </div>
+      <p id="mapModalSubtitle">Wähle einen Kartendienst:</p>
+      <div id="mapServiceButtons" style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+        <!-- Buttons will be dynamically added here -->
+      </div>
+    </div>
+  </div>
+
   <script>
     // WebSocket Verbindung
     let ws = null;
     let activeJobs = new Map();
+    let locationsData = {};
+
+    // Load locations data
+    async function loadLocations() {
+      try {
+        const res = await fetch('/api/locations');
+        if (res.ok) {
+          locationsData = await res.json();
+          console.log(`Loaded ${Object.keys(locationsData).length} locations`);
+        }
+      } catch (error) {
+        console.error('Failed to load locations:', error);
+      }
+    }
+
+    // Open location in map service
+    function openLocation(locationId, locationName) {
+      // Look up location by ID
+      const location = locationsData[locationId];
+      
+      if (!location || !location.latitude || !location.longitude) {
+        console.error('Location not found:', locationId, locationName);
+        alert('Standort-Daten nicht verfügbar');
+        return;
+      }
+
+      const lat = location.latitude;
+      const lng = location.longitude;
+      const name = location.description || locationName;
+      
+      // Detect device type
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      
+      // Build map service options
+      let services = [];
+      
+      if (isMobile && isIOS) {
+        services = [
+          { name: 'Apple Maps', url: `maps://maps.apple.com/?q=${encodeURIComponent(name)}&ll=${lat},${lng}` },
+          { name: 'Google Maps', url: `https://maps.google.com/?q=${lat},${lng}` }
+        ];
+      } else if (isMobile) {
+        services = [
+          { name: 'Google Maps', url: `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(name)})` }
+        ];
+      } else {
+        services = [
+          { name: 'Google Maps', url: `https://www.google.com/maps?q=${lat},${lng}` },
+          { name: 'OpenStreetMap', url: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}&zoom=19` }
+        ];
+      }
+      
+      // Show modal with service options
+      showMapModal(name, services);
+    }
+
+    function showMapModal(locationName, services) {
+      const modal = document.getElementById('mapModal');
+      const title = document.getElementById('mapModalTitle');
+      const subtitle = document.getElementById('mapModalSubtitle');
+      const buttonsContainer = document.getElementById('mapServiceButtons');
+      
+      title.textContent = 'Kartendienst wählen';
+      subtitle.textContent = `Standort: ${locationName}`;
+      
+      // Clear previous buttons
+      buttonsContainer.innerHTML = '';
+      
+      // Add service buttons
+      services.forEach(service => {
+        const button = document.createElement('button');
+        button.className = 'btn btn-primary';
+        button.textContent = service.name;
+        button.onclick = () => {
+          window.open(service.url, '_blank');
+          closeMapModal();
+        };
+        buttonsContainer.appendChild(button);
+      });
+      
+      // Add cancel button
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'btn btn-secondary';
+      cancelBtn.textContent = 'Abbrechen';
+      cancelBtn.onclick = closeMapModal;
+      buttonsContainer.appendChild(cancelBtn);
+      
+      modal.style.display = 'flex';
+    }
+
+    function closeMapModal() {
+      document.getElementById('mapModal').style.display = 'none';
+    }
 
     function connectWebSocket() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -663,6 +898,7 @@
       switch (data.type) {
         case 'jobStarted':
           addLog('info', `Job gestartet: Booking ${data.bookingId}, Intervall: ${data.intervalSeconds}s`);
+          isPolling = true;
           activeJobs.set(data.jobId, {
             bookingId: data.bookingId,
             attempts: 0,
@@ -693,12 +929,18 @@
           addLog(data.success ? 'success' : 'info', 
             `Job beendet nach ${data.totalAttempts} Versuchen: ${data.success ? 'Erfolgreich!' : data.message}`);
           activeJobs.delete(data.jobId);
+          isPolling = activeJobs.size > 0;
           renderActiveJobs();
+          // Refresh course list if successful booking (silent mode)
+          if (data.success) {
+            setTimeout(() => searchCourses(true), 1000);
+          }
           break;
 
         case 'jobStopped':
           addLog('info', `Job gestoppt nach ${data.totalAttempts} Versuchen`);
           activeJobs.delete(data.jobId);
+          isPolling = activeJobs.size > 0;
           renderActiveJobs();
           break;
 
@@ -838,7 +1080,11 @@
     });
 
     // Kurse suchen
-    document.getElementById('searchBtn').addEventListener('click', async () => {
+    let autoRefreshInterval = null;
+    let isPolling = false;
+    let isRefreshing = false;
+
+    async function searchCourses(silent = false) {
       const days = document.getElementById('filterDays').value;
       const level = document.getElementById('filterLevel').value;
       const minAvailable = document.getElementById('filterAvailable').value;
@@ -858,8 +1104,13 @@
       // Wenn immer noch kein ID, warnen (oder Volleyball nehmen?)
       const finalSportId = document.getElementById('filterSportId').value || 285; // Fallback Volleyball
 
-      document.getElementById('coursesLoading').classList.remove('hidden');
-      document.getElementById('coursesList').innerHTML = '';
+      // Only show loading and clear list on initial search, not on refresh
+      if (!silent) {
+        document.getElementById('coursesLoading').classList.remove('hidden');
+        document.getElementById('coursesList').innerHTML = '';
+      } else {
+        isRefreshing = true;
+      }
 
       try {
         const params = new URLSearchParams({ days });
@@ -870,25 +1121,81 @@
         const res = await fetch(`/api/courses?${params}`);
         const data = await res.json();
 
-        renderCourses(data.courses);
+        renderCourses(data.courses, silent);
       } catch (error) {
-        document.getElementById('coursesList').innerHTML = 
-          `<div class="alert alert-error">Fehler: ${error.message}</div>`;
+        if (!silent) {
+          document.getElementById('coursesList').innerHTML = 
+            `<div class="alert alert-error">Fehler: ${error.message}</div>`;
+        }
       } finally {
         document.getElementById('coursesLoading').classList.add('hidden');
+        isRefreshing = false;
       }
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', async () => {
+      await searchCourses(false);
+      startAutoRefresh();
     });
 
-    function renderCourses(courses) {
+    // Auto-refresh every 30 seconds (at :00 and :30 of each minute)
+    function startAutoRefresh() {
+      // Clear existing interval
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+      }
+
+      // Calculate time until next 30-second mark
+      const now = new Date();
+      const seconds = now.getSeconds();
+      const msUntilNext30 = ((30 - (seconds % 30)) % 30) * 1000;
+
+      // Wait until next 30-second mark, then refresh every 30 seconds
+      setTimeout(() => {
+        // Do initial refresh
+        if (!isPolling) {
+          searchCourses(true);
+        }
+
+        // Set up interval for every 30 seconds
+        autoRefreshInterval = setInterval(() => {
+          if (!isPolling) {
+            searchCourses(true);
+          }
+        }, 30000);
+      }, msUntilNext30 || 30000);
+    }
+
+    function renderCourses(courses, silent = false) {
       const container = document.getElementById('coursesList');
       
-      if (courses.length === 0) {
+      if (courses.length === 0 && !silent) {
         container.innerHTML = '<p style="text-align: center; color: #888; padding: 40px;">Keine Kurse gefunden</p>';
         return;
       }
 
+      if (courses.length === 0 && silent) {
+        return; // Don't clear existing courses on silent refresh if no results
+      }
+
       const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
       
+      // If silent refresh, update existing cards instead of replacing all HTML
+      if (silent && container.children.length > 0) {
+        courses.forEach(course => {
+          const existingCard = container.querySelector(`[data-course-id="${course.id}"]`);
+          if (existingCard) {
+            updateCourseCard(existingCard, course);
+          } else {
+            // New course appeared, add it
+            const newCard = createCourseCard(course, days);
+            container.appendChild(newCard);
+          }
+        });
+        return;
+      }
+
+      // Initial render or explicit refresh
       let html = '';
       courses.forEach(course => {
         const date = new Date(course.startDate);
@@ -904,28 +1211,32 @@
         const isBooked = course.userParticipation?.participationStatus === 1;
         const isWaiting = course.userParticipation?.participationStatus === 3;
         const cardClass = isBooked ? 'booked' : (isWaiting ? 'waiting' : (isFull ? 'full' : ''));
-        const statusBadge = isBooked ? '<span style="color: #44ff44; font-weight: bold;">✓ Angemeldet</span>' 
+        const statusBadge = isBooked ? '<span style="color: #44ff44; font-weight: bold;">Angemeldet</span>' 
                           : (isWaiting ? '<span style="color: #ffaa00; font-weight: bold;">Warteliste</span>' : '');
 
+        const locationButton = course.locationId 
+          ? `<button class="btn-link" onclick="openLocation(${course.locationId}, '${course.location.replace(/'/g, "\\'")}')">🗺️</button>`
+          : '';
+
         html += `
-          <div class="course-card ${cardClass}">
+          <div class="course-card ${cardClass}" data-course-id="${course.id}">
             <div class="course-info">
               <h3>${course.description} ${statusBadge}</h3>
               <div class="course-meta">
                 <span>📅 ${dayName}, ${dateStr}</span>
                 <span>🕐 ${time} Uhr</span>
-                <span>📍 ${course.location}</span>
+                <span>📍 ${course.location} ${locationButton}</span>
                 <span>🎫 ID: ${course.id}</span>
                 ${supervisors}
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 15px;">
-              <span class="availability ${isFull ? 'full' : 'available'}">
-                ${isFull ? 'Voll' : ` ${course.available} frei`}
+              <span class="availability ${isFull ? 'full' : 'available'}" data-available="${course.available}">
+                ${isFull ? 'Voll' : `${course.available} frei`}
               </span>
               <div class="course-actions">
                 <button class="btn btn-primary" onclick="quickRegister(${course.id})" ${isBooked || isWaiting ? 'disabled' : ''}>
-                  ${isBooked ? '✓ Angemeldet' : (isWaiting ? 'Warteliste' : (isFull ? 'Warteliste' : 'Anmelden'))}
+                  ${isBooked ? 'Angemeldet' : (isWaiting ? 'Warteliste' : (isFull ? 'Warteliste' : 'Anmelden'))}
                 </button>
                 <button class="btn btn-secondary" onclick="openPollingModal(${course.id})" ${isBooked || isWaiting ? 'disabled' : ''}>
                   Polling
@@ -937,6 +1248,90 @@
       });
 
       container.innerHTML = html;
+    }
+
+    // Update existing course card without full re-render
+    function updateCourseCard(card, course) {
+      const availabilityEl = card.querySelector('.availability');
+      const oldAvailable = parseInt(availabilityEl.dataset.available) || 0;
+      const newAvailable = course.available;
+      const isFull = newAvailable <= 0;
+
+      // Update availability with animation if changed
+      if (oldAvailable !== newAvailable) {
+        availabilityEl.dataset.available = newAvailable;
+        availabilityEl.className = `availability ${isFull ? 'full' : 'available'}`;
+        availabilityEl.innerHTML = isFull ? 'Voll' : `${newAvailable} frei`;
+        
+        // Add pulse animation
+        availabilityEl.style.animation = 'pulse 0.5s ease-in-out';
+        setTimeout(() => {
+          availabilityEl.style.animation = '';
+        }, 500);
+      }
+
+      // Check current booking status from the card
+      const wasBooked = card.classList.contains('booked');
+      const wasWaiting = card.classList.contains('waiting');
+      const wasInAnyStatus = wasBooked || wasWaiting;
+
+      // Check new booking status
+      const isBooked = course.userParticipation?.participationStatus === 1;
+      const isWaiting = course.userParticipation?.participationStatus === 3;
+      const isInAnyStatus = isBooked || isWaiting;
+      
+      // Update if status changed in any direction
+      if (wasInAnyStatus !== isInAnyStatus || (isInAnyStatus && (wasBooked !== isBooked || wasWaiting !== isWaiting))) {
+        const buttons = card.querySelectorAll('button');
+        const primaryBtn = card.querySelector('.btn-primary');
+        const titleEl = card.querySelector('h3');
+        
+        if (isBooked) {
+          // Booked
+          card.className = 'course-card booked';
+          buttons.forEach(btn => btn.disabled = true);
+          if (primaryBtn) primaryBtn.textContent = 'Angemeldet';
+          // Update title badge
+          if (titleEl) {
+            const titleText = titleEl.textContent.split('<span')[0].trim();
+            const courseName = course.description;
+            titleEl.innerHTML = `${courseName} <span style="color: #44ff44; font-weight: bold;">Angemeldet</span>`;
+          }
+        } else if (isWaiting) {
+          // Waiting list
+          card.className = 'course-card waiting';
+          buttons.forEach(btn => btn.disabled = true);
+          if (primaryBtn) primaryBtn.textContent = '⏳ Warteliste';
+          // Update title badge
+          if (titleEl) {
+            const courseName = course.description;
+            titleEl.innerHTML = `${courseName} <span style="color: #ffaa00; font-weight: bold;">Warteliste</span>`;
+          }
+        } else {
+          // No longer booked/waiting (cancelled)
+          card.className = `course-card ${isFull ? 'full' : ''}`;
+          buttons.forEach(btn => btn.disabled = false);
+          if (primaryBtn) {
+            primaryBtn.textContent = isFull ? 'Warteliste' : 'Anmelden';
+          }
+          // Remove badge from title
+          if (titleEl) {
+            const courseName = course.description;
+            titleEl.textContent = courseName;
+          }
+        }
+        
+        // Add flash animation for any status change
+        card.style.animation = 'flash 0.5s ease-in-out';
+        setTimeout(() => {
+          card.style.animation = '';
+        }, 500);
+      }
+    }
+
+    function createCourseCard(course, days) {
+      // This would create a new card element, but for now we can skip since courses don't usually appear mid-session
+      return null;
     }
 
     // Schnelle Anmeldung
@@ -964,6 +1359,8 @@
             addLog('info', `Server: ${JSON.stringify(data.fullResponse)}`);
           }
           alert('✅ Erfolgreich angemeldet!');
+          // Refresh course list after successful booking (silent mode)
+          setTimeout(() => searchCourses(true), 1000);
         } else {
           addLog('error', `❌ ${data.message}`);
           if (data.fullResponse) {
@@ -1110,10 +1507,10 @@
 
     connectWebSocket();
     loadStatus();
-    loadSports(); // Lädt Sportarten und führt initiale Suche aus
-    
-    // Kurse initial laden - Entfernt, da loadSports() das jetzt macht
-    // document.getElementById('searchBtn').click();
+    loadLocations();
+
+    // Kurse initial laden
+    document.getElementById('searchBtn').click();
   </script>
 </body>
 </html>
