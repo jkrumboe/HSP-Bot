@@ -13,7 +13,7 @@ import { getValidToken, getStoredMemberInfo, loadTokens, saveTokens, getTokenInf
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const server = createServer(app);
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = process.env.PORT || 3000;
 const API_URL = 'https://backbone-web-api.production.munster.delcom.nl';
@@ -116,10 +116,42 @@ app.post('/api/auth/import', async (req, res) => {
   }
 });
 
+// Sportarten abrufen
+app.get('/api/sports', async (req, res) => {
+  try {
+    const filter = {
+      allowAsLinkedProduct: true,
+      isActive: 1
+    };
+    const encoded = encodeURIComponent(JSON.stringify(filter));
+    const url = `${API_URL}/products?s=${encoded}&limit=1000&sort=description,ASC`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`API Fehler: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const sports = data.data || [];
+    
+    res.json(sports.map(s => ({
+      id: s.id,
+      name: s.description
+    })));
+  } catch (error) {
+    console.error('Sportarten laden Fehler:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Kurse suchen
 app.get('/api/courses', async (req, res) => {
   try {
-    const { days = 8, level, minAvailable } = req.query;
+    const { days = 8, level, minAvailable, sportId } = req.query;
 
     const start = new Date();
     start.setHours(0, 0, 0, 0);
@@ -128,9 +160,16 @@ app.get('/api/courses', async (req, res) => {
     end.setDate(end.getDate() + parseInt(days));
     end.setHours(23, 59, 59, 999);
 
+    let linkedProductIds = [Volleyball_ID];
+    
+    // If sportId provided, use it
+    if (sportId) {
+      linkedProductIds = [parseInt(sportId)];
+    }
+
     const filter = {
       startDate: { "$gte": start.toISOString(), "$lte": end.toISOString() },
-      linkedProductId: { "$in": [Volleyball_ID] },
+      linkedProductId: { "$in": linkedProductIds },
       status: { "$ne": 2 }
     };
 
@@ -609,6 +648,6 @@ function handlePollingStop(ws, jobId) {
 
 // Server starten
 server.listen(PORT, () => {
-  console.log(`\n🚀 HSP-Bot GUI Server läuft auf http://localhost:${PORT}`);
+  console.log(`\n🚀 HSP-Bot Backend Server läuft auf http://localhost:${PORT}`);
   console.log(`📡 WebSocket bereit für Live-Updates\n`);
 });
