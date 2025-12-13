@@ -506,6 +506,12 @@
       
       <div class="filter-row">
         <div class="form-group">
+          <label>Sportart</label>
+          <input list="sportsList" id="filterSport" placeholder="Tippen zum Suchen..." autocomplete="off">
+          <datalist id="sportsList"></datalist>
+          <input type="hidden" id="filterSportId">
+        </div>
+        <div class="form-group">
           <label>Zeitraum (Tage)</label>
           <input type="number" id="filterDays" value="8" min="1" max="30">
         </div>
@@ -776,11 +782,81 @@
       }
     }
 
+    // Sportarten laden
+    let sportsMap = new Map();
+    async function loadSports() {
+      try {
+        const res = await fetch('/api/sports');
+        const sports = await res.json();
+        
+        const datalist = document.getElementById('sportsList');
+        const input = document.getElementById('filterSport');
+        
+        sports.forEach(s => {
+          const option = document.createElement('option');
+          option.value = s.name;
+          datalist.appendChild(option);
+          sportsMap.set(s.name, s.id);
+          
+          // Default Volleyball
+          if (s.id === 285) {
+             input.value = s.name;
+             document.getElementById('filterSportId').value = s.id;
+          }
+        });
+        
+        // Input Handler für ID Mapping
+        input.addEventListener('input', (e) => {
+            const val = e.target.value;
+            const id = sportsMap.get(val);
+            if (id) {
+                document.getElementById('filterSportId').value = id;
+            } else {
+                document.getElementById('filterSportId').value = '';
+            }
+        });
+        
+        // Initial search if we have a default
+        if (input.value) document.getElementById('searchBtn').click();
+
+      } catch (e) {
+        console.error('Fehler beim Laden der Sportarten:', e);
+      }
+    }
+
+    // Enter-Taste für Suche
+    ['filterSport', 'filterDays', 'filterLevel', 'filterAvailable'].forEach(id => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('searchBtn').click();
+          }
+        });
+      }
+    });
+
     // Kurse suchen
     document.getElementById('searchBtn').addEventListener('click', async () => {
       const days = document.getElementById('filterDays').value;
       const level = document.getElementById('filterLevel').value;
       const minAvailable = document.getElementById('filterAvailable').value;
+      const sportId = document.getElementById('filterSportId').value;
+      
+      // Fallback: Wenn User tippt aber nicht exakt auswählt, versuchen wir zu matchen (case insensitive)
+      if (!sportId) {
+         const val = document.getElementById('filterSport').value.toLowerCase();
+         for (let [name, id] of sportsMap.entries()) {
+             if (name.toLowerCase() === val) {
+                 document.getElementById('filterSportId').value = id;
+                 break;
+             }
+         }
+      }
+      
+      // Wenn immer noch kein ID, warnen (oder Volleyball nehmen?)
+      const finalSportId = document.getElementById('filterSportId').value || 285; // Fallback Volleyball
 
       document.getElementById('coursesLoading').classList.remove('hidden');
       document.getElementById('coursesList').innerHTML = '';
@@ -789,6 +865,7 @@
         const params = new URLSearchParams({ days });
         if (level) params.append('level', level);
         if (minAvailable > 0) params.append('minAvailable', minAvailable);
+        if (finalSportId) params.append('sportId', finalSportId);
 
         const res = await fetch(`/api/courses?${params}`);
         const data = await res.json();
@@ -1033,9 +1110,10 @@
 
     connectWebSocket();
     loadStatus();
-
-    // Kurse initial laden
-    document.getElementById('searchBtn').click();
+    loadSports(); // Lädt Sportarten und führt initiale Suche aus
+    
+    // Kurse initial laden - Entfernt, da loadSports() das jetzt macht
+    // document.getElementById('searchBtn').click();
   </script>
 </body>
 </html>
