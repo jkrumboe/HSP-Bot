@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🏐 Better-HSP - Kursanmeldung</title>
+  <title>🏐 HSP-Bot - Kursanmeldung</title>
   <style>
     * {
       box-sizing: border-box;
@@ -73,6 +73,7 @@
     .tabs {
       display: flex;
       gap: 10px;
+      margin-bottom: 20px;
     }
 
     .tab {
@@ -98,8 +99,6 @@
 
     .panel {
       display: none;
-      border-radius: 16px;
-      padding: 16px;
     }
 
     .panel.active {
@@ -110,9 +109,6 @@
       color: #00d4ff;
       margin-bottom: 20px;
       font-size: 1.5em;
-    }
-
-    .form-group {
     }
 
     label {
@@ -498,7 +494,7 @@
       display: none !important;
     }
 
-    @media (max-width: 768px) {
+   @media (max-width: 768px) {
       .container {
         padding: 15px;
       }
@@ -605,7 +601,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>🏐 Bette-HSP</h1>
+      <h1>🏐 HSP-Bot</h1>
       <p>Automatische Kursanmeldung für den Hochschulsport</p>
     </header>
 
@@ -632,30 +628,34 @@
 
     <!-- Kurse suchen Panel -->
     <div class="panel active" id="panel-courses">
-
+      <h2>Kurse suchen</h2>
       <div class="header-filter">
-        <h2>Kurse suchen</h2>
-        
-        <div class="filter-row">
-          <div class="form-group">
-            <label>Zeitraum (Tage)</label>
-            <input type="number" id="filterDays" value="8" min="1" max="30">
-          </div>
-          <div class="form-group">
-            <label>Level</label>
-            <select id="filterLevel">
-              <option value="">Alle</option>
-              <option value="1">Level 1</option>
-              <option value="2">Level 2</option>
-              <option value="3">Level 3</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Min. freie Plätze</label>
-            <input type="number" id="filterAvailable" value="0" min="0">
-          </div>
-          <div class="form-group" style="display: flex; align-items: flex-end;">
-            <button class="btn btn-primary" id="searchBtn">🔍 Suchen</button>
+      <div class="filter-row">
+        <div class="form-group">
+          <label>Sportart</label>
+          <input list="sportsList" id="filterSport" placeholder="Tippen zum Suchen..." autocomplete="off">
+          <datalist id="sportsList"></datalist>
+          <input type="hidden" id="filterSportId">
+        </div>
+        <div class="form-group">
+          <label>Zeitraum (Tage)</label>
+          <input type="number" id="filterDays" value="8" min="1" max="30">
+        </div>
+        <div class="form-group">
+          <label>Level</label>
+          <select id="filterLevel">
+            <option value="">Alle</option>
+            <option value="1">Level 1</option>
+            <option value="2">Level 2</option>
+            <option value="3">Level 3</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Min. freie Plätze</label>
+          <input type="number" id="filterAvailable" value="0" min="0">
+        </div>
+        <div class="form-group" style="display: flex; align-items: flex-end;">
+          <button class="btn btn-primary" id="searchBtn">🔍 Suchen</button>
           </div>
         </div>
       </div>
@@ -756,7 +756,7 @@
     </div>
   </div>
 
-  <!-- Map Service Selection Modal -->
+   <!-- Map Service Selection Modal -->
   <div class="modal" id="mapModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -895,7 +895,7 @@
       const logContainer = document.getElementById('logContainer');
       const time = new Date().toLocaleTimeString('de-DE');
 
-      switch (data.type) {
+       switch (data.type) {
         case 'jobStarted':
           addLog('info', `Job gestartet: Booking ${data.bookingId}, Intervall: ${data.intervalSeconds}s`);
           isPolling = true;
@@ -1507,10 +1507,10 @@
 
     connectWebSocket();
     loadStatus();
-    loadLocations();
-
-    // Kurse initial laden
-    document.getElementById('searchBtn').click();
+    loadSports(); // Lädt Sportarten und führt initiale Suche aus
+    
+    // Kurse initial laden - Entfernt, da loadSports() das jetzt macht
+    // document.getElementById('searchBtn').click();
   </script>
 </body>
 </html>
