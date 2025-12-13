@@ -297,10 +297,28 @@ app.get('/api/courses', async (req, res) => {
       }
     }
 
+    // Load course titles from products.json using linkedProductId
+    let courseTitles = {};
+    try {
+      const productsPath = path.join(__dirname, 'products.json');
+      if (fs.existsSync(productsPath)) {
+        const productsData = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        courseTitles = Object.keys(productsData).reduce((acc, key) => {
+          acc[key] = productsData[key].description;
+          return acc;
+        }, {});
+      } else {
+        console.warn('products.json not found. Run fetch-products.js to create it.');
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden von products.json:', error);
+    }
+
     // Format für Frontend
     const formatted = courses.map(c => ({
       id: c.id,
-      description: c.description,
+      description: courseTitles[c.linkedProductId] || c.description,
+      level: c.description,
       startDate: c.startDate,
       endDate: c.endDate,
       location: locationNames[c.productId] || c.location || 'Unbekannt',
