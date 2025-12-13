@@ -12,8 +12,8 @@ Ein automatisiertes System zur Anmeldung in Hochschulsport-Kursen mit Token-Mana
 
 ```bash
 # Repository klonen (falls noch nicht geschehen)
-git clone https://github.com/RobinGummels/HSP-Bot.git
-cd HSP-Bot
+git clone https://github.com/jkrumboe/Better-HSP.git
+cd Better-HSP
 
 # Abhängigkeiten installieren
 npm install
@@ -107,7 +107,7 @@ https://backbone-web-api.production.munster.delcom.nl/auth/refresh
 
 ## 👤 Autor
 
-Justin Krumböhmer und Robin Gummels
+Justin Krumböhmer, Robin Gummels und Humam Hikmat
 
 ---
 
