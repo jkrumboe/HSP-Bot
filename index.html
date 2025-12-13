@@ -1223,7 +1223,7 @@
             <div class="course-info">
               <h3>${course.description} ${statusBadge}</h3>
               <div class="course-meta">
-                <strong>${course.level}</strong>
+                ${course.level ? `<strong>${course.level}</strong>` : ''}
                 <span>📅 ${dayName}, ${dateStr}</span>
                 <span>🕐 ${time} Uhr</span>
                 <span>📍 ${course.location} ${locationButton}</span>
