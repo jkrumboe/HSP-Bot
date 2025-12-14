@@ -8,6 +8,7 @@
     "start": "node index.js",
     "server": "node server.js",
     "search": "node searchCourses.js",
+    "fetch-products": "node fetch-products.js",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
