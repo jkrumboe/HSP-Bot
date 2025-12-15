@@ -79,8 +79,13 @@ app.post('/api/auth/import', async (req, res) => {
     const tokenResponse = authData.tokenResponse;
     const member = authData.member;
 
+    const dataDir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
     // Speichere auth-data.json
-    fs.writeFileSync(path.join(__dirname, 'auth-data.json'), JSON.stringify(authData, null, 2));
+    fs.writeFileSync(path.join(dataDir, 'auth-data.json'), JSON.stringify(authData, null, 2));
 
     // Speichere in token-store.json
     saveTokens({
