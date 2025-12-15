@@ -729,6 +729,13 @@
         <textarea id="authDataInput" placeholder='Hier den kopierten Text einfügen...'></textarea>
       </div>
 
+      <div class="form-group">
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+          <input type="checkbox" id="autoFixJson" checked style="width: auto;">
+          <span>Automatische Format-Korrektur (bei Problemen deaktivieren)</span>
+        </label>
+      </div>
+
       <button class="btn btn-primary" id="importAuthBtn">Importieren</button>
 
       <div id="authResult" class="hidden"></div>
@@ -1447,6 +1454,7 @@
     document.getElementById('importAuthBtn').addEventListener('click', async () => {
       const input = document.getElementById('authDataInput').value.trim();
       const resultDiv = document.getElementById('authResult');
+      const autoFix = document.getElementById('autoFixJson').checked;
 
       if (!input) {
         resultDiv.className = 'alert alert-error';
@@ -1456,27 +1464,81 @@
       }
 
       try {
-        // Parse den Input (kann in Anführungszeichen sein)
         let authData;
-        if (input.startsWith('"') && input.endsWith('"')) {
-          authData = JSON.parse(JSON.parse(input));
-        } else {
-          authData = JSON.parse(input);
+        let cleanedInput = input;
+        
+        // Firefox "Copy Object" Format (Single Quotes)
+        if (cleanedInput.startsWith("'") && cleanedInput.endsWith("'")) {
+             // Entferne äußere Single-Quotes
+             cleanedInput = cleanedInput.slice(1, -1);
+             
+             // Firefox escapet Backslashes im String-Literal doppelt (z.B. userAgents)
+             // Wir müssen \\ zu \ machen, damit es valides JSON wird wie bei Chrome
+             cleanedInput = cleanedInput.replace(/\\\\/g, '\\');
+             
+             // Eventuell escapte Single-Quotes \' zu ' machen
+             cleanedInput = cleanedInput.replace(/\\'/g, "'");
+        } 
+        // Chrome "Copy String Contents" (manchmal mit " am Anfang/Ende wenn falsch kopiert)
+        else if (cleanedInput.startsWith('"') && cleanedInput.endsWith('"')) {
+             try {
+                // Versuche es als JSON-String zu parsen (unquoting)
+                cleanedInput = JSON.parse(cleanedInput);
+             } catch (e) {
+                // Fallback: Einfaches Entfernen der Quotes
+                cleanedInput = cleanedInput.slice(1, -1);
+             }
         }
 
-        // Korrigiere doppelt escapte Strings (z.B. userAgents-Feld)
-        const jsonStr = JSON.stringify(authData);
-        const fixedStr = jsonStr.replace(/\\\\/g, '\\').replace(/\\"\[/g, '[').replace(/\]\\"/g, ']');
+        // Versuche zu parsen
         try {
-          authData = JSON.parse(fixedStr);
-        } catch {
-          // Falls Korrektur fehlschlägt, nutze Original
+          authData = JSON.parse(cleanedInput);
+        } catch (parseError) {
+           console.error('Parsing failed:', parseError);
+           // Wenn das fehlschlägt, probieren wir den ursprünglichen Input nochmal direkt
+           // (vielleicht war es doch kein Firefox-Format oder wir haben zu viel entfernt)
+           if (input !== cleanedInput) {
+              try {
+                authData = JSON.parse(input);
+              } catch (e) {
+                throw new Error(`JSON Parsing fehlgeschlagen: ${parseError.message}`);
+              }
+           } else {
+              throw new Error(`JSON Parsing fehlgeschlagen: ${parseError.message}`);
+           }
+        }
+
+        if (autoFix) {
+            // Zusätzliche Sicherheits-Korrekturen für bekannte Probleme
+            // Falls userAgents immer noch kaputt ist (z.B. [\"... statt ["...)
+            const jsonStr = JSON.stringify(authData);
+            
+            // Fix für: userAgents":"[\"Android... (dies ist in Chrome korrekt, aber falls es doppelt escaped ist)
+            // Hier sind wir vorsichtig. 
+            // Der Server-Fix macht: replace(/\\\\/g, '\\') -> das haben wir oben schon für Firefox-Input gemacht.
+            
+            // Wir prüfen, ob userAgents ein String ist, den wir parsen können
+            if (authData.member && typeof authData.member.userAgents === 'string') {
+                try {
+                    JSON.parse(authData.member.userAgents);
+                } catch (e) {
+                    // Wenn userAgents nicht parsbar ist, ist es wahrscheinlich kaputt escaped
+                    // Versuche zu reparieren: [\" -> ["
+                    let ua = authData.member.userAgents;
+                    if (ua.includes('[\\"')) {
+                        authData.member.userAgents = ua.replace(/\\"/g, '"');
+                    }
+                }
+            }
         }
 
         const res = await fetch('/api/auth/import', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(authData)
+          body: JSON.stringify({
+            ...authData,
+            _skipServerFix: !autoFix // Signal an Server
+          })
         });
 
         const data = await res.json();
@@ -1497,6 +1559,7 @@
       } catch (error) {
         resultDiv.className = 'alert alert-error';
         resultDiv.textContent = `❌ Fehler: ${error.message}. Bitte prüfe das Format der Daten.`;
+        console.error(error);
       }
 
       resultDiv.classList.remove('hidden');

@@ -18,6 +18,9 @@ export default defineConfig({
     },
     hmr: {
       clientPort: 5173
-    }
+    },
+    allowedHosts: [
+      'betterhsp.example.com'
+    ]
   }
 })
