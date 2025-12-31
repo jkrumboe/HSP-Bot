@@ -257,8 +257,6 @@ function parseArgs() {
     } else if (arg === '--level' && args[i + 1]) {
       options.level = parseInt(args[++i]);
     } else if (arg === '--min-available' && args[i + 1]) {
-      options.level = parseInt(args[++i]);
-    } else if (arg === '--min-available' && args[i + 1]) {
       options.minAvailable = parseInt(args[++i]);
     } else if (arg === '--days' && args[i + 1]) {
       options.days = parseInt(args[++i]);
