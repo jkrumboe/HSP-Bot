@@ -471,7 +471,59 @@
       display: none !important;
     }
 
-    @media (max-width: 768px) {
+   @media (max-width: 768px) {
+      .container {
+        padding: 15px;
+      }
+
+      header h1 {
+        font-size: 1.8em;
+      }
+
+      header p {
+        font-size: 0.9em;
+      }
+
+      .header-filter {
+        gap: 15px;
+      }
+
+      .header-filter h2 {
+        font-size: 1.3em;
+      }
+
+      .tabs {
+        justify-content: center;
+      }
+
+      .filter-row {
+        flex-direction: column;
+        gap: 12px;
+        width: 100%;
+      }
+
+      .filter-row .form-group {
+        width: 100%;
+      }
+
+      .filter-row input,
+      .filter-row select {
+        padding: 10px 12px;
+        font-size: 16px; /* Prevents zoom on iOS */
+      }
+
+      .filter-row label {
+        font-size: 0.9em;
+        margin-bottom: 6px;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 20px;
+        font-size: 1em;
+      }
+
       .course-card {
         grid-template-columns: 1fr;
       }
@@ -575,6 +627,11 @@
 
       <div class="active-jobs" id="activeJobs"></div>
 
+      <div class="scheduled-jobs" id="scheduledJobsSection">
+        <h3 style="margin-bottom: 15px;">📅 Geplante Buchungen</h3>
+        <div id="scheduledJobsList"></div>
+      </div>
+
       <div class="log-container" id="logContainer">
         <div class="log-entry info">
           <span class="time">--:--:--</span>
@@ -633,6 +690,20 @@
     </div>
   </div>
 
+   <!-- Map Service Selection Modal -->
+  <div class="modal" id="mapModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="mapModalTitle">Kartendienst wählen</h3>
+        <button class="modal-close" onclick="closeMapModal()">×</button>
+      </div>
+      <p id="mapModalSubtitle">Wähle einen Kartendienst:</p>
+      <div id="mapServiceButtons" style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+        <!-- Buttons will be dynamically added here -->
+      </div>
+    </div>
+  </div>
+
   <script>
     // WebSocket Verbindung
     let ws = null;
@@ -677,6 +748,31 @@
             maxAttempts: data.maxAttempts
           });
           renderActiveJobs();
+          break;
+
+        case 'scheduleTriggered':
+          addLog('info', `📅 Geplante Buchung gestartet: Booking ${data.bookingId}`);
+          loadScheduledJobs();
+          break;
+
+        case 'scheduleAttempt':
+          const schedType = data.success ? 'success' : (data.rateLimited ? 'warning' : 'info');
+          addLog(schedType, `📅 Versuch ${data.attempt}: ${data.message}`);
+          break;
+
+        case 'scheduleCompleted':
+          addLog(data.success ? 'success' : 'warning', 
+            `📅 Geplante Buchung beendet: ${data.message} (${data.totalAttempts} Versuche)`);
+          loadScheduledJobs();
+          // Refresh course list if successful
+          if (data.success) {
+            setTimeout(() => searchCourses(true), 1000);
+          }
+          break;
+
+        case 'scheduleError':
+          addLog('error', `📅 Fehler bei geplanter Buchung: ${data.message}`);
+          loadScheduledJobs();
           break;
 
         case 'attempt':
@@ -937,6 +1033,9 @@
                 <button class="btn btn-secondary" onclick="openPollingModal(${course.id})" ${isBooked || isWaiting ? 'disabled' : ''}>
                   🔄 Polling
                 </button>
+                <button class="btn btn-secondary" onclick="openScheduleModal(${course.id}, '${course.startDate}', '${course.description.replace(/'/g, "\\'")}')" ${isBooked || isWaiting ? 'disabled' : ''}>
+                  Planen
+                </button>
               </div>
             </div>
           </div>
@@ -1080,6 +1179,180 @@
       document.getElementById('pollingModal').classList.remove('active');
     }
 
+    // Schedule Modal
+    async function openScheduleModal(bookingId, courseStartTime, courseDescription) {
+      const modal = document.getElementById('scheduleModal');
+      const errorDiv = document.getElementById('scheduleModalError');
+      errorDiv.classList.add('hidden');
+      
+      document.getElementById('scheduleBookingId').value = bookingId;
+      document.getElementById('scheduleCourseStartTime').value = courseStartTime;
+      document.getElementById('scheduleCourseDescription').value = courseDescription;
+      document.getElementById('scheduleModalCourse').textContent = courseDescription;
+      
+      // Format course time
+      const courseDate = new Date(courseStartTime);
+      const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+      document.getElementById('scheduleCourseTime').textContent = 
+        `${days[courseDate.getDay()]}, ${courseDate.toLocaleDateString('de-DE')} um ${courseDate.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+      
+      // Fetch booking info from server
+      try {
+        const res = await fetch(`/api/schedule/info?courseStartTime=${encodeURIComponent(courseStartTime)}`);
+        const info = await res.json();
+        
+        const bookingAvailable = new Date(info.bookingAvailableAt);
+        const pollingStart = new Date(info.pollingStartAt);
+        const pollingStop = new Date(info.pollingStopAt);
+        
+        document.getElementById('scheduleBookingAvailable').textContent = 
+          `${days[bookingAvailable.getDay()]}, ${bookingAvailable.toLocaleDateString('de-DE')} um ${bookingAvailable.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+        document.getElementById('schedulePollingStart').textContent = 
+          `~${pollingStart.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} Uhr (zufällig)`;
+        document.getElementById('schedulePollingStop').textContent = 
+          `${pollingStop.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} Uhr`;
+        
+        const confirmBtn = document.getElementById('scheduleConfirmBtn');
+        if (info.isInPast) {
+          errorDiv.textContent = 'Der Buchungszeitraum ist bereits abgelaufen.';
+          errorDiv.classList.remove('hidden');
+          confirmBtn.disabled = true;
+        } else if (info.isInWindow) {
+          document.getElementById('schedulePollingStart').textContent = 'Sofort (Fenster aktiv)';
+          confirmBtn.disabled = false;
+        } else {
+          confirmBtn.disabled = false;
+        }
+      } catch (error) {
+        console.error('Error fetching schedule info:', error);
+        errorDiv.textContent = 'Fehler beim Laden der Buchungsinformationen.';
+        errorDiv.classList.remove('hidden');
+      }
+      
+      modal.classList.add('active');
+    }
+
+    function closeScheduleModal() {
+      document.getElementById('scheduleModal').classList.remove('active');
+    }
+
+    async function confirmSchedule() {
+      const bookingId = document.getElementById('scheduleBookingId').value;
+      const courseStartTime = document.getElementById('scheduleCourseStartTime').value;
+      const courseDescription = document.getElementById('scheduleCourseDescription').value;
+      const errorDiv = document.getElementById('scheduleModalError');
+      
+      try {
+        const res = await fetch('/api/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId: parseInt(bookingId), courseStartTime, courseDescription })
+        });
+        
+        const data = await res.json();
+        
+        if (res.ok && data.success) {
+          closeScheduleModal();
+          addLog('success', `📅 Buchung geplant für Booking ${bookingId}`);
+          loadScheduledJobs();
+          // Switch to register tab to show scheduled jobs
+          document.querySelector('[data-tab="register"]').click();
+        } else {
+          errorDiv.textContent = data.error || 'Fehler beim Planen der Buchung';
+          errorDiv.classList.remove('hidden');
+        }
+      } catch (error) {
+        errorDiv.textContent = error.message;
+        errorDiv.classList.remove('hidden');
+      }
+    }
+
+    // Load and render scheduled jobs
+    async function loadScheduledJobs() {
+      try {
+        const res = await fetch('/api/schedule');
+        const data = await res.json();
+        renderScheduledJobs(data.jobs || []);
+      } catch (error) {
+        console.error('Error loading scheduled jobs:', error);
+      }
+    }
+
+    function renderScheduledJobs(jobs) {
+      const container = document.getElementById('scheduledJobsList');
+      const section = document.getElementById('scheduledJobsSection');
+      
+      const pendingJobs = jobs.filter(j => j.status === 'pending' || j.status === 'running');
+      
+      if (pendingJobs.length === 0) {
+        container.innerHTML = '<p style="color: #666;">Keine geplanten Buchungen</p>';
+        return;
+      }
+      
+      const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+      
+      let html = '';
+      pendingJobs.forEach(job => {
+        const bookingAvailable = new Date(job.bookingAvailableAt);
+        const pollingStart = new Date(job.pollingStartAt);
+        const courseStart = new Date(job.courseStartTime);
+        const statusClass = job.status === 'running' ? 'running' : '';
+        const statusText = job.status === 'running' ? '🔄 Läuft...' : '⏳ Geplant';
+        
+        html += `
+          <div class="scheduled-job-card ${statusClass}">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <div>
+                <strong>${job.courseDescription || `Booking ${job.bookingId}`}</strong>
+                <span style="margin-left: 10px; color: ${job.status === 'running' ? '#44ff44' : '#00d4ff'};">${statusText}</span>
+              </div>
+              ${job.status === 'pending' ? `<button class="btn btn-danger" onclick="cancelScheduledJob('${job.id}')">✕ Abbrechen</button>` : ''}
+            </div>
+            <div class="schedule-info">
+              <div class="schedule-info-item">
+                <span class="schedule-info-label">Kurs</span>
+                <span>${days[courseStart.getDay()]}, ${courseStart.toLocaleDateString('de-DE')} ${courseStart.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
+              </div>
+              <div class="schedule-info-item">
+                <span class="schedule-info-label">Buchung verfügbar</span>
+                <span class="schedule-time-highlight">${days[bookingAvailable.getDay()]}, ${bookingAvailable.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr</span>
+              </div>
+              <div class="schedule-info-item">
+                <span class="schedule-info-label">Polling startet</span>
+                <span>~${pollingStart.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} Uhr</span>
+              </div>
+              <div class="schedule-info-item">
+                <span class="schedule-info-label">Booking ID</span>
+                <span>${job.bookingId}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      
+      container.innerHTML = html;
+    }
+
+    async function cancelScheduledJob(jobId) {
+      if (!confirm('Geplante Buchung wirklich abbrechen?')) return;
+      
+      try {
+        const res = await fetch(`/api/schedule/${encodeURIComponent(jobId)}`, {
+          method: 'DELETE'
+        });
+        
+        if (res.ok) {
+          addLog('info', '📅 Geplante Buchung abgebrochen');
+          loadScheduledJobs();
+        } else {
+          const data = await res.json();
+          addLog('error', data.error || 'Fehler beim Abbrechen');
+        }
+      } catch (error) {
+        addLog('error', error.message);
+      }
+    }
+
     function startPollingFromModal() {
       const bookingId = document.getElementById('modalBookingId').value;
       const intervalSeconds = parseInt(document.getElementById('modalInterval').value) || 60;
@@ -1203,9 +1476,11 @@
 
     connectWebSocket();
     loadStatus();
-
-    // Kurse initial laden
-    document.getElementById('searchBtn').click();
+    loadLocations();
+    loadSports(); // Lädt Sportarten und führt initiale Suche aus
+    
+    // Kurse initial laden - Entfernt, da loadSports() das jetzt macht
+    // document.getElementById('searchBtn').click();
   </script>
 </body>
 </html>

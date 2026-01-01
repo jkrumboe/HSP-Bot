@@ -9,6 +9,14 @@ import { fileURLToPath } from 'url';
 
 // Importiere die bestehenden Module
 import { getValidToken, getStoredMemberInfo, loadTokens, saveTokens, getTokenInfo, decodeToken } from './token-manager.js';
+import { 
+  initializeScheduler, 
+  scheduleBooking, 
+  cancelScheduledJob, 
+  getScheduledJobs, 
+  registerWebSocket,
+  getBookingInfo 
+} from './scheduler.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -385,10 +393,72 @@ app.get('/api/jobs', (req, res) => {
   res.json({ jobs });
 });
 
+// ============ SCHEDULING ENDPOINTS ============
+
+// Get booking availability info for a course
+app.get('/api/schedule/info', (req, res) => {
+  const { courseStartTime } = req.query;
+  
+  if (!courseStartTime) {
+    return res.status(400).json({ error: 'courseStartTime erforderlich' });
+  }
+  
+  try {
+    const info = getBookingInfo(courseStartTime);
+    res.json(info);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Schedule a booking
+app.post('/api/schedule', (req, res) => {
+  const { bookingId, courseStartTime, courseDescription } = req.body;
+  
+  if (!bookingId || !courseStartTime) {
+    return res.status(400).json({ error: 'bookingId und courseStartTime erforderlich' });
+  }
+  
+  const memberInfo = getStoredMemberInfo();
+  if (!memberInfo.memberId) {
+    return res.status(401).json({ error: 'Nicht authentifiziert. Bitte Token importieren.' });
+  }
+  
+  const result = scheduleBooking(bookingId, courseStartTime, courseDescription);
+  
+  if (result.success) {
+    res.json(result);
+  } else {
+    res.status(400).json({ error: result.error });
+  }
+});
+
+// Get all scheduled jobs
+app.get('/api/schedule', (req, res) => {
+  const jobs = getScheduledJobs();
+  res.json({ jobs });
+});
+
+// Cancel a scheduled job
+app.delete('/api/schedule/:jobId', (req, res) => {
+  const { jobId } = req.params;
+  
+  const result = cancelScheduledJob(jobId);
+  
+  if (result.success) {
+    res.json({ success: true, message: 'Geplante Buchung abgebrochen' });
+  } else {
+    res.status(404).json({ error: result.error });
+  }
+});
+
 // ============ WEBSOCKET ============
 
 wss.on('connection', (ws) => {
   console.log('🔌 WebSocket Client verbunden');
+  
+  // Register WebSocket for scheduler broadcasts
+  registerWebSocket(ws);
 
   ws.on('message', async (message) => {
     try {
@@ -589,6 +659,10 @@ function handlePollingStop(ws, jobId) {
 
 // Server starten
 server.listen(PORT, () => {
-  console.log(`\n🚀 HSP-Bot GUI Server läuft auf http://localhost:${PORT}`);
-  console.log(`📡 WebSocket bereit für Live-Updates\n`);
+  console.log(`\n🚀 HSP-Bot Backend Server läuft auf http://localhost:${PORT}`);
+  console.log(`📡 WebSocket bereit für Live-Updates`);
+  
+  // Initialize the scheduler and restore pending jobs
+  initializeScheduler();
+  console.log('');
 });
