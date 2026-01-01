@@ -33,6 +33,15 @@
       font-size: 2.5em;
       color: #91C736;
       margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+    }
+
+    header h1 img {
+      height: 50px;
+      width: auto;
     }
 
     header p {
@@ -691,7 +700,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>🏐 HSP-Bot</h1>
+      <h1><img src="resources/logo.png" alt="HSP Logo"> HSP-Bot</h1>
       <p>Automatische Kursanmeldung für den Hochschulsport</p>
     </header>
 
@@ -1379,7 +1388,7 @@
         const cardClass = isBooked ? 'booked' : (isWaiting ? 'waiting' : (isFull ? 'full' : ''));
         let statusBadge = '';
         if (isBooked) {
-          statusBadge = '<span style="color: #91C736; font-weight: bold;">✅ Angemeldet</span>';
+          statusBadge = '<span style="color: #91C736; font-weight: bold;">Angemeldet</span>';
         } else if (isWaiting) {
           statusBadge = '<span style="color: #ffaa00; font-weight: bold;">⚠️ Warteliste</span>';
         } else if (isScheduled) {
