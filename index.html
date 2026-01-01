@@ -768,6 +768,43 @@
     </div>
   </div>
 
+  <!-- Schedule Modal -->
+  <div class="modal" id="scheduleModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Buchung planen</h3>
+        <button class="modal-close" onclick="closeScheduleModal()">×</button>
+      </div>
+      <p id="scheduleModalCourse" style="margin-bottom: 15px; color: #91C736; font-weight: bold;"></p>
+      <div class="schedule-info" style="margin-bottom: 20px;">
+        <div class="schedule-info-item">
+          <span class="schedule-info-label">Kurs-Startzeit</span>
+          <span id="scheduleCourseTime"></span>
+        </div>
+        <div class="schedule-info-item">
+          <span class="schedule-info-label">Buchung verfügbar ab</span>
+          <span id="scheduleBookingAvailable" class="schedule-time-highlight"></span>
+        </div>
+        <div class="schedule-info-item">
+          <span class="schedule-info-label">Polling startet</span>
+          <span id="schedulePollingStart"></span>
+        </div>
+        <div class="schedule-info-item">
+          <span class="schedule-info-label">Polling endet</span>
+          <span id="schedulePollingStop"></span>
+        </div>
+      </div>
+      <p style="font-size: 0.9em; color: #666; margin-bottom: 20px;">
+        Der Bot startet automatisch im zufälligen 10-Sekunden-Fenster vor der Buchungsverfügbarkeit und versucht bis 20 Sekunden danach, dich anzumelden.
+      </p>
+      <div id="scheduleModalError" class="alert alert-error hidden" style="margin-bottom: 15px;"></div>
+      <input type="hidden" id="scheduleBookingId">
+      <input type="hidden" id="scheduleCourseStartTime">
+      <input type="hidden" id="scheduleCourseDescription">
+      <button class="btn btn-primary" onclick="confirmSchedule()" id="scheduleConfirmBtn">Buchung planen</button>
+    </div>
+  </div>
+
    <!-- Map Service Selection Modal -->
   <div class="modal" id="mapModal">
     <div class="modal-content">
@@ -787,6 +824,7 @@
     let ws = null;
     let activeJobs = new Map();
     let locationsData = {};
+    let scheduledJobsMap = new Map(); // Map of bookingId -> scheduled job
 
     // Load locations data
     async function loadLocations() {
@@ -1247,9 +1285,18 @@
         // Check user participation status
         const isBooked = course.userParticipation?.participationStatus === 1;
         const isWaiting = course.userParticipation?.participationStatus === 3;
+        const isScheduled = scheduledJobsMap.has(course.id);
         const cardClass = isBooked ? 'booked' : (isWaiting ? 'waiting' : (isFull ? 'full' : ''));
-        const statusBadge = isBooked ? '<span style="color: #44ff44; font-weight: bold;">Angemeldet</span>' 
-                          : (isWaiting ? '<span style="color: #ffaa00; font-weight: bold;">Warteliste</span>' : '');
+        let statusBadge = '';
+        if (isBooked) {
+          statusBadge = '<span style="color: #91C736; font-weight: bold;">✅ Angemeldet</span>';
+        } else if (isWaiting) {
+          statusBadge = '<span style="color: #ffaa00; font-weight: bold;">⚠️ Warteliste</span>';
+        } else if (isScheduled) {
+          const scheduledJob = scheduledJobsMap.get(course.id);
+          const statusIcon = scheduledJob.status === 'running' ? '🔄' : '📅';
+          statusBadge = `<span style="color: #91C736; font-weight: bold;">${statusIcon} Geplant</span>`;
+        }
 
         const locationButton = course.locationId 
           ? `<button class="btn-link" onclick="openLocation(${course.locationId}, '${course.location.replace(/'/g, "\\'")}')">🗺️</button>`
@@ -1279,8 +1326,8 @@
                 <button class="btn btn-secondary" onclick="openPollingModal(${course.id})" ${isBooked || isWaiting ? 'disabled' : ''}>
                   Polling
                 </button>
-                <button class="btn btn-secondary" onclick="openScheduleModal(${course.id}, '${course.startDate}', '${course.description.replace(/'/g, "\\'")}')" ${isBooked || isWaiting ? 'disabled' : ''}>
-                  Planen
+                <button class="btn btn-secondary" onclick="openScheduleModal(${course.id}, '${course.startDate}', '${course.description.replace(/'/g, "\\'")}')" ${isBooked || isWaiting || isScheduled ? 'disabled' : ''}>
+                  ${isScheduled ? 'Geplant' : 'Planen'}
                 </button>
               </div>
             </div>
@@ -1518,7 +1565,23 @@
       try {
         const res = await fetch('/api/schedule');
         const data = await res.json();
-        renderScheduledJobs(data.jobs || []);
+        const jobs = data.jobs || [];
+        
+        // Update scheduled jobs map
+        scheduledJobsMap.clear();
+        jobs.forEach(job => {
+          if (job.status === 'pending' || job.status === 'running') {
+            scheduledJobsMap.set(job.bookingId, job);
+          }
+        });
+        
+        renderScheduledJobs(jobs);
+        
+        // Refresh course cards to show scheduled status
+        const coursesList = document.getElementById('coursesList');
+        if (coursesList && coursesList.children.length > 0) {
+          searchCourses(true);
+        }
       } catch (error) {
         console.error('Error loading scheduled jobs:', error);
       }
@@ -1550,7 +1613,7 @@
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
               <div>
                 <strong>${job.courseDescription || `Booking ${job.bookingId}`}</strong>
-                <span style="margin-left: 10px; color: ${job.status === 'running' ? '#44ff44' : '#00d4ff'};">${statusText}</span>
+                <span style="margin-left: 10px; color: ${job.status === 'running' ? '#ffaa00' : '#91C736'};">${statusText}</span>
               </div>
               ${job.status === 'pending' ? `<button class="btn btn-danger" onclick="cancelScheduledJob('${job.id}')">✕ Abbrechen</button>` : ''}
             </div>
@@ -1780,6 +1843,7 @@
     loadStatus();
     loadLocations();
     loadSports(); // Lädt Sportarten und führt initiale Suche aus
+    loadScheduledJobs(); // Load scheduled jobs on page load
     
     // Kurse initial laden - Entfernt, da loadSports() das jetzt macht
     // document.getElementById('searchBtn').click();
