@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🏐 HSP-Bot - Kursanmeldung</title>
+  <title>🏐 Better-HSP - Kursanmeldung</title>
   <style>
     * {
       box-sizing: border-box;
@@ -99,9 +99,6 @@
 
     .panel {
       display: none;
-      background: rgba(255,255,255,0.03);
-      border-radius: 16px;
-      padding: 16px;
     }
 
     .panel.active {
@@ -112,10 +109,6 @@
       color: #00d4ff;
       margin-bottom: 20px;
       font-size: 1.5em;
-    }
-
-    .form-group {
-      margin-bottom: 20px;
     }
 
     label {
@@ -203,10 +196,24 @@
     }
 
     .filter-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 15px;
-      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      width: 100%;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .header-filter {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .header-filter h2 {
+      margin: 0;
     }
 
     .courses-list {
@@ -253,13 +260,13 @@
       display: flex;
       flex-wrap: wrap;
       gap: 15px;
-      color: #888;
+      color: #b8b8b8;
       font-size: 0.9em;
     }
 
     .course-meta span {
       display: flex;
-      align-items: center;
+      align-items: flex-end;
       gap: 5px;
     }
 
@@ -287,8 +294,24 @@
     }
 
     .course-actions .btn {
+      justify-content: center;
       padding: 8px 16px;
       font-size: 0.9em;
+    }
+
+    .btn-link {
+      background: none;
+      border: none;
+      color: #00d4ff;
+      cursor: pointer;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .btn-link:hover {
+      color: #00ffff;
+      text-decoration: underline;
     }
 
     .instructions {
@@ -526,10 +549,51 @@
 
       .course-card {
         grid-template-columns: 1fr;
+        padding: 15px;
+        gap: 12px;
       }
       
       .course-actions {
         flex-direction: row;
+        width: 100%;
+      }
+
+      .course-actions .btn {
+        flex: 1;
+      }
+
+      .course-meta {
+        font-size: 0.85em;
+        gap: 10px;
+      }
+
+      .tabs {
+        gap: 5px;
+      }
+
+      .tab {
+        padding: 10px 12px;
+        font-size: 0.9em;
+      }
+
+      .modal-content {
+        width: 90%;
+        max-width: 90%;
+        padding: 20px;
+      }
+
+      .status-bar {
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+      }
+
+      .status-item {
+        font-size: 0.9em;
+      }
+
+      input, select, textarea {
+        font-size: 16px; /* Prevents zoom on iOS */
       }
     }
   </style>
@@ -565,8 +629,14 @@
     <!-- Kurse suchen Panel -->
     <div class="panel active" id="panel-courses">
       <h2>Kurse suchen</h2>
-      
+      <div class="header-filter">
       <div class="filter-row">
+        <div class="form-group">
+          <label>Sportart</label>
+          <input list="sportsList" id="filterSport" placeholder="Tippen zum Suchen..." autocomplete="off">
+          <datalist id="sportsList"></datalist>
+          <input type="hidden" id="filterSportId">
+        </div>
         <div class="form-group">
           <label>Zeitraum (Tage)</label>
           <input type="number" id="filterDays" value="8" min="1" max="30">
@@ -586,6 +656,7 @@
         </div>
         <div class="form-group" style="display: flex; align-items: flex-end;">
           <button class="btn btn-primary" id="searchBtn">🔍 Suchen</button>
+          </div>
         </div>
       </div>
 
@@ -663,6 +734,13 @@
         <textarea id="authDataInput" placeholder='Hier den kopierten Text einfügen...'></textarea>
       </div>
 
+      <div class="form-group">
+        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+          <input type="checkbox" id="autoFixJson" checked style="width: auto;">
+          <span>Automatische Format-Korrektur (bei Problemen deaktivieren)</span>
+        </label>
+      </div>
+
       <button class="btn btn-primary" id="importAuthBtn">Importieren</button>
 
       <div id="authResult" class="hidden"></div>
@@ -708,12 +786,104 @@
     // WebSocket Verbindung
     let ws = null;
     let activeJobs = new Map();
+    let locationsData = {};
+
+    // Load locations data
+    async function loadLocations() {
+      try {
+        const res = await fetch('/api/locations');
+        if (res.ok) {
+          locationsData = await res.json();
+          console.log(`Loaded ${Object.keys(locationsData).length} locations`);
+        }
+      } catch (error) {
+        console.error('Failed to load locations:', error);
+      }
+    }
+
+    // Open location in map service
+    function openLocation(locationId, locationName) {
+      // Look up location by ID
+      const location = locationsData[locationId];
+      
+      if (!location || !location.latitude || !location.longitude) {
+        console.error('Location not found:', locationId, locationName);
+        alert('Standort-Daten nicht verfügbar');
+        return;
+      }
+
+      const lat = location.latitude;
+      const lng = location.longitude;
+      const name = location.description || locationName;
+      
+      // Detect device type
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      
+      // Build map service options
+      let services = [];
+      
+      if (isMobile && isIOS) {
+        services = [
+          { name: 'Apple Maps', url: `maps://maps.apple.com/?q=${encodeURIComponent(name)}&ll=${lat},${lng}` },
+          { name: 'Google Maps', url: `https://maps.google.com/?q=${lat},${lng}` }
+        ];
+      } else if (isMobile) {
+        services = [
+          { name: 'Google Maps', url: `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(name)})` }
+        ];
+      } else {
+        services = [
+          { name: 'Google Maps', url: `https://www.google.com/maps?q=${lat},${lng}` },
+          { name: 'OpenStreetMap', url: `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}&zoom=19` }
+        ];
+      }
+      
+      // Show modal with service options
+      showMapModal(name, services);
+    }
+
+    function showMapModal(locationName, services) {
+      const modal = document.getElementById('mapModal');
+      const title = document.getElementById('mapModalTitle');
+      const subtitle = document.getElementById('mapModalSubtitle');
+      const buttonsContainer = document.getElementById('mapServiceButtons');
+      
+      title.textContent = 'Kartendienst wählen';
+      subtitle.textContent = `Standort: ${locationName}`;
+      
+      // Clear previous buttons
+      buttonsContainer.innerHTML = '';
+      
+      // Add service buttons
+      services.forEach(service => {
+        const button = document.createElement('button');
+        button.className = 'btn btn-primary';
+        button.textContent = service.name;
+        button.onclick = () => {
+          window.open(service.url, '_blank');
+          closeMapModal();
+        };
+        buttonsContainer.appendChild(button);
+      });
+      
+      // Add cancel button
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'btn btn-secondary';
+      cancelBtn.textContent = 'Abbrechen';
+      cancelBtn.onclick = closeMapModal;
+      buttonsContainer.appendChild(cancelBtn);
+      
+      modal.style.display = 'flex';
+    }
+
+    function closeMapModal() {
+      document.getElementById('mapModal').style.display = 'none';
+    }
 
     function connectWebSocket() {
-      // In development, connect to backend server directly
-      const wsUrl = window.location.hostname === 'localhost' 
-        ? 'ws://localhost:3000'
-        : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
       ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
@@ -737,7 +907,7 @@
       const logContainer = document.getElementById('logContainer');
       const time = new Date().toLocaleTimeString('de-DE');
 
-      switch (data.type) {
+       switch (data.type) {
         case 'jobStarted':
           addLog('info', `Job gestartet: Booking ${data.bookingId}, Intervall: ${data.intervalSeconds}s`);
           isPolling = true;
@@ -891,6 +1061,61 @@
       }
     }
 
+    // Sportarten laden
+    let sportsMap = new Map();
+    async function loadSports() {
+      try {
+        const res = await fetch('/api/sports');
+        const sports = await res.json();
+        
+        const datalist = document.getElementById('sportsList');
+        const input = document.getElementById('filterSport');
+        
+        sports.forEach(s => {
+          const option = document.createElement('option');
+          option.value = s.name;
+          datalist.appendChild(option);
+          sportsMap.set(s.name, s.id);
+          
+          // Default Volleyball
+          if (s.id === 285) {
+             input.value = s.name;
+             document.getElementById('filterSportId').value = s.id;
+          }
+        });
+        
+        // Input Handler für ID Mapping
+        input.addEventListener('input', (e) => {
+            const val = e.target.value;
+            const id = sportsMap.get(val);
+            if (id) {
+                document.getElementById('filterSportId').value = id;
+            } else {
+                document.getElementById('filterSportId').value = '';
+            }
+        });
+        
+        // Initial search if we have a default
+        if (input.value) document.getElementById('searchBtn').click();
+
+      } catch (e) {
+        console.error('Fehler beim Laden der Sportarten:', e);
+      }
+    }
+
+    // Enter-Taste für Suche
+    ['filterSport', 'filterDays', 'filterLevel', 'filterAvailable'].forEach(id => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('searchBtn').click();
+          }
+        });
+      }
+    });
+
     // Kurse suchen
     let autoRefreshInterval = null;
     let isPolling = false;
@@ -900,6 +1125,21 @@
       const days = document.getElementById('filterDays').value;
       const level = document.getElementById('filterLevel').value;
       const minAvailable = document.getElementById('filterAvailable').value;
+      const sportId = document.getElementById('filterSportId').value;
+      
+      // Fallback: Wenn User tippt aber nicht exakt auswählt, versuchen wir zu matchen (case insensitive)
+      if (!sportId) {
+         const val = document.getElementById('filterSport').value.toLowerCase();
+         for (let [name, id] of sportsMap.entries()) {
+             if (name.toLowerCase() === val) {
+                 document.getElementById('filterSportId').value = id;
+                 break;
+             }
+         }
+      }
+      
+      // Wenn immer noch kein ID, warnen (oder Volleyball nehmen?)
+      const finalSportId = document.getElementById('filterSportId').value || 285; // Fallback Volleyball
 
       // Only show loading and clear list on initial search, not on refresh
       if (!silent) {
@@ -913,6 +1153,7 @@
         const params = new URLSearchParams({ days });
         if (level) params.append('level', level);
         if (minAvailable > 0) params.append('minAvailable', minAvailable);
+        if (finalSportId) params.append('sportId', finalSportId);
 
         const res = await fetch(`/api/courses?${params}`);
         const data = await res.json();
@@ -1010,14 +1251,19 @@
         const statusBadge = isBooked ? '<span style="color: #44ff44; font-weight: bold;">Angemeldet</span>' 
                           : (isWaiting ? '<span style="color: #ffaa00; font-weight: bold;">Warteliste</span>' : '');
 
+        const locationButton = course.locationId 
+          ? `<button class="btn-link" onclick="openLocation(${course.locationId}, '${course.location.replace(/'/g, "\\'")}')">🗺️</button>`
+          : '';
+
         html += `
           <div class="course-card ${cardClass}" data-course-id="${course.id}">
             <div class="course-info">
               <h3>${course.description} ${statusBadge}</h3>
               <div class="course-meta">
+                ${course.level ? `<strong>${course.level}</strong>` : ''}
                 <span>📅 ${dayName}, ${dateStr}</span>
                 <span>🕐 ${time} Uhr</span>
-                <span>📍 ${course.location}</span>
+                <span>📍 ${course.location} ${locationButton}</span>
                 <span>🎫 ID: ${course.id}</span>
                 ${supervisors}
               </div>
@@ -1031,7 +1277,7 @@
                   ${isBooked ? 'Angemeldet' : (isWaiting ? 'Warteliste' : (isFull ? 'Warteliste' : 'Anmelden'))}
                 </button>
                 <button class="btn btn-secondary" onclick="openPollingModal(${course.id})" ${isBooked || isWaiting ? 'disabled' : ''}>
-                  🔄 Polling
+                  Polling
                 </button>
                 <button class="btn btn-secondary" onclick="openScheduleModal(${course.id}, '${course.startDate}', '${course.description.replace(/'/g, "\\'")}')" ${isBooked || isWaiting ? 'disabled' : ''}>
                   Planen
@@ -1415,6 +1661,7 @@
     document.getElementById('importAuthBtn').addEventListener('click', async () => {
       const input = document.getElementById('authDataInput').value.trim();
       const resultDiv = document.getElementById('authResult');
+      const autoFix = document.getElementById('autoFixJson').checked;
 
       if (!input) {
         resultDiv.className = 'alert alert-error';
@@ -1424,27 +1671,81 @@
       }
 
       try {
-        // Parse den Input (kann in Anführungszeichen sein)
         let authData;
-        if (input.startsWith('"') && input.endsWith('"')) {
-          authData = JSON.parse(JSON.parse(input));
-        } else {
-          authData = JSON.parse(input);
+        let cleanedInput = input;
+        
+        // Firefox "Copy Object" Format (Single Quotes)
+        if (cleanedInput.startsWith("'") && cleanedInput.endsWith("'")) {
+             // Entferne äußere Single-Quotes
+             cleanedInput = cleanedInput.slice(1, -1);
+             
+             // Firefox escapet Backslashes im String-Literal doppelt (z.B. userAgents)
+             // Wir müssen \\ zu \ machen, damit es valides JSON wird wie bei Chrome
+             cleanedInput = cleanedInput.replace(/\\\\/g, '\\');
+             
+             // Eventuell escapte Single-Quotes \' zu ' machen
+             cleanedInput = cleanedInput.replace(/\\'/g, "'");
+        } 
+        // Chrome "Copy String Contents" (manchmal mit " am Anfang/Ende wenn falsch kopiert)
+        else if (cleanedInput.startsWith('"') && cleanedInput.endsWith('"')) {
+             try {
+                // Versuche es als JSON-String zu parsen (unquoting)
+                cleanedInput = JSON.parse(cleanedInput);
+             } catch (e) {
+                // Fallback: Einfaches Entfernen der Quotes
+                cleanedInput = cleanedInput.slice(1, -1);
+             }
         }
 
-        // Korrigiere doppelt escapte Strings (z.B. userAgents-Feld)
-        const jsonStr = JSON.stringify(authData);
-        const fixedStr = jsonStr.replace(/\\\\/g, '\\').replace(/\\"\[/g, '[').replace(/\]\\"/g, ']');
+        // Versuche zu parsen
         try {
-          authData = JSON.parse(fixedStr);
-        } catch {
-          // Falls Korrektur fehlschlägt, nutze Original
+          authData = JSON.parse(cleanedInput);
+        } catch (parseError) {
+           console.error('Parsing failed:', parseError);
+           // Wenn das fehlschlägt, probieren wir den ursprünglichen Input nochmal direkt
+           // (vielleicht war es doch kein Firefox-Format oder wir haben zu viel entfernt)
+           if (input !== cleanedInput) {
+              try {
+                authData = JSON.parse(input);
+              } catch (e) {
+                throw new Error(`JSON Parsing fehlgeschlagen: ${parseError.message}`);
+              }
+           } else {
+              throw new Error(`JSON Parsing fehlgeschlagen: ${parseError.message}`);
+           }
+        }
+
+        if (autoFix) {
+            // Zusätzliche Sicherheits-Korrekturen für bekannte Probleme
+            // Falls userAgents immer noch kaputt ist (z.B. [\"... statt ["...)
+            const jsonStr = JSON.stringify(authData);
+            
+            // Fix für: userAgents":"[\"Android... (dies ist in Chrome korrekt, aber falls es doppelt escaped ist)
+            // Hier sind wir vorsichtig. 
+            // Der Server-Fix macht: replace(/\\\\/g, '\\') -> das haben wir oben schon für Firefox-Input gemacht.
+            
+            // Wir prüfen, ob userAgents ein String ist, den wir parsen können
+            if (authData.member && typeof authData.member.userAgents === 'string') {
+                try {
+                    JSON.parse(authData.member.userAgents);
+                } catch (e) {
+                    // Wenn userAgents nicht parsbar ist, ist es wahrscheinlich kaputt escaped
+                    // Versuche zu reparieren: [\" -> ["
+                    let ua = authData.member.userAgents;
+                    if (ua.includes('[\\"')) {
+                        authData.member.userAgents = ua.replace(/\\"/g, '"');
+                    }
+                }
+            }
         }
 
         const res = await fetch('/api/auth/import', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(authData)
+          body: JSON.stringify({
+            ...authData,
+            _skipServerFix: !autoFix // Signal an Server
+          })
         });
 
         const data = await res.json();
@@ -1465,6 +1766,7 @@
       } catch (error) {
         resultDiv.className = 'alert alert-error';
         resultDiv.textContent = `❌ Fehler: ${error.message}. Bitte prüfe das Format der Daten.`;
+        console.error(error);
       }
 
       resultDiv.classList.remove('hidden');

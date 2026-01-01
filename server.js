@@ -21,7 +21,7 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const server = createServer(app);
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ server, path: '/ws' });
 
 const PORT = process.env.PORT || 3000;
 const API_URL = 'https://backbone-web-api.production.munster.delcom.nl';
@@ -60,19 +60,40 @@ app.get('/api/status', (req, res) => {
   });
 });
 
+// Get locations data
+app.get('/api/locations', (req, res) => {
+  try {
+    const locationsPath = path.join(__dirname, 'locations.json');
+    if (!fs.existsSync(locationsPath)) {
+      return res.status(404).json({ error: 'Locations data not found' });
+    }
+    const locations = JSON.parse(fs.readFileSync(locationsPath, 'utf8'));
+    res.json(locations);
+  } catch (error) {
+    console.error('Error loading locations:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Auth-Daten importieren
 app.post('/api/auth/import', async (req, res) => {
   try {
     let authData = req.body;
+    const skipServerFix = authData._skipServerFix;
 
-    // Korrigiere doppelt escapte Strings (z.B. im userAgents-Feld)
-    const jsonStr = JSON.stringify(authData);
-    const fixedStr = jsonStr.replace(/\\\\/g, '\\').replace(/\\"\[/g, '[').replace(/\]\\"(,|})/g, ']$1');
-    try {
-      authData = JSON.parse(fixedStr);
-    } catch {
-      // Falls Korrektur fehlschlägt, nutze Original
+    if (!skipServerFix) {
+      // Korrigiere doppelt escapte Strings (z.B. im userAgents-Feld)
+      const jsonStr = JSON.stringify(authData);
+      const fixedStr = jsonStr.replace(/\\\\/g, '\\').replace(/\\"\[/g, '[').replace(/\]\\"(,|})/g, ']$1');
+      try {
+        authData = JSON.parse(fixedStr);
+      } catch {
+        // Falls Korrektur fehlschlägt, nutze Original
+      }
     }
+    
+    // Bereinige das interne Flag
+    if (authData._skipServerFix !== undefined) delete authData._skipServerFix;
 
     if (!authData || !authData.tokenResponse || !authData.member) {
       return res.status(400).json({ error: 'Ungültige Auth-Daten. Bitte kompletten JSON-Inhalt einfügen.' });
@@ -81,8 +102,13 @@ app.post('/api/auth/import', async (req, res) => {
     const tokenResponse = authData.tokenResponse;
     const member = authData.member;
 
+    const dataDir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
     // Speichere auth-data.json
-    fs.writeFileSync(path.join(__dirname, 'auth-data.json'), JSON.stringify(authData, null, 2));
+    fs.writeFileSync(path.join(dataDir, 'auth-data.json'), JSON.stringify(authData, null, 2));
 
     // Speichere in token-store.json
     saveTokens({
@@ -109,10 +135,42 @@ app.post('/api/auth/import', async (req, res) => {
   }
 });
 
+// Sportarten abrufen
+app.get('/api/sports', async (req, res) => {
+  try {
+    const filter = {
+      allowAsLinkedProduct: true,
+      isActive: 1
+    };
+    const encoded = encodeURIComponent(JSON.stringify(filter));
+    const url = `${API_URL}/products?s=${encoded}&limit=1000&sort=description,ASC`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (!response.ok) {
+      throw new Error(`API Fehler: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const sports = data.data || [];
+    
+    res.json(sports.map(s => ({
+      id: s.id,
+      name: s.description
+    })));
+  } catch (error) {
+    console.error('Sportarten laden Fehler:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Kurse suchen
 app.get('/api/courses', async (req, res) => {
   try {
-    const { days = 8, level, minAvailable } = req.query;
+    const { days = 8, level, minAvailable, sportId } = req.query;
 
     const start = new Date();
     start.setHours(0, 0, 0, 0);
@@ -121,9 +179,16 @@ app.get('/api/courses', async (req, res) => {
     end.setDate(end.getDate() + parseInt(days));
     end.setHours(23, 59, 59, 999);
 
+    let linkedProductIds = [Volleyball_ID];
+    
+    // If sportId provided, use it
+    if (sportId) {
+      linkedProductIds = [parseInt(sportId)];
+    }
+
     const filter = {
       startDate: { "$gte": start.toISOString(), "$lte": end.toISOString() },
-      linkedProductId: { "$in": [Volleyball_ID] },
+      linkedProductId: { "$in": linkedProductIds },
       status: { "$ne": 2 }
     };
 
@@ -224,6 +289,7 @@ app.get('/api/courses', async (req, res) => {
 
     // Fetch location names from products
     let locationNames = {};
+    let productLocationIds = {};
     if (courses.length > 0) {
       try {
         const productIds = [...new Set(courses.map(c => c.productId).filter(id => id))];
@@ -239,6 +305,9 @@ app.get('/api/courses', async (req, res) => {
             const productsData = await productsRes.json();
             productsData.data?.forEach(product => {
               locationNames[product.id] = product.description;
+              if (product.locationId) {
+                productLocationIds[product.id] = product.locationId;
+              }
             });
           }
         }
@@ -247,13 +316,32 @@ app.get('/api/courses', async (req, res) => {
       }
     }
 
+    // Load course titles from products.json using linkedProductId
+    let courseTitles = {};
+    try {
+      const productsPath = path.join(__dirname, 'products.json');
+      if (fs.existsSync(productsPath)) {
+        const productsData = JSON.parse(fs.readFileSync(productsPath, 'utf8'));
+        courseTitles = Object.keys(productsData).reduce((acc, key) => {
+          acc[key] = productsData[key].description;
+          return acc;
+        }, {});
+      } else {
+        console.warn('products.json not found. Run fetch-products.js to create it.');
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden von products.json:', error);
+    }
+
     // Format für Frontend
     const formatted = courses.map(c => ({
       id: c.id,
-      description: c.description,
+      description: courseTitles[c.linkedProductId] || c.description,
+      level: c.description,
       startDate: c.startDate,
       endDate: c.endDate,
       location: locationNames[c.productId] || c.location || 'Unbekannt',
+      locationId: productLocationIds[c.productId] || null,
       available: c.availableParticipantCount,
       maxParticipants: c.maxParticipantCount,
       status: c.status,
