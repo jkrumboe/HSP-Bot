@@ -297,7 +297,6 @@
 
     .course-meta span {
       display: flex;
-      align-items: flex-end;
       gap: 5px;
     }
 
@@ -336,6 +335,7 @@
       color: #91C736;
       cursor: pointer;
       font-weight: 600;
+      font-size: 1.2rem ;
       text-decoration: none;
       transition: color 0.2s;
     }
@@ -350,7 +350,6 @@
       border-radius: 12px;
       padding: 20px;
       margin-bottom: 20px;
-      border-left: 4px solid #91C736;
     }
 
     .instructions h3 {
@@ -754,7 +753,7 @@
           <input type="number" id="filterAvailable" value="0" min="0">
         </div>
         <div class="form-group" style="display: flex; align-items: flex-end;">
-          <button class="btn btn-primary" id="searchBtn">🔍 Suchen</button>
+          <button class="btn btn-primary" id="searchBtn">Suchen</button>
           </div>
         </div>
       </div>
@@ -798,7 +797,7 @@
       <div class="active-jobs" id="activeJobs"></div>
 
       <div class="scheduled-jobs" id="scheduledJobsSection">
-        <h3 style="margin-bottom: 15px;">📅 Geplante Buchungen</h3>
+        <h3 style="margin-bottom: 15px;">Geplante Buchungen</h3>
         <div id="scheduledJobsList"></div>
       </div>
 
@@ -1058,18 +1057,18 @@
           break;
 
         case 'scheduleTriggered':
-          addLog('info', `📅 Geplante Buchung gestartet: Booking ${data.bookingId}`);
+          addLog('info', `Geplante Buchung gestartet: Booking ${data.bookingId}`);
           loadScheduledJobs();
           break;
 
         case 'scheduleAttempt':
           const schedType = data.success ? 'success' : (data.rateLimited ? 'warning' : 'info');
-          addLog(schedType, `📅 Versuch ${data.attempt}: ${data.message}`);
+          addLog(schedType, `Versuch ${data.attempt}: ${data.message}`);
           break;
 
         case 'scheduleCompleted':
           addLog(data.success ? 'success' : 'warning', 
-            `📅 Geplante Buchung beendet: ${data.message} (${data.totalAttempts} Versuche)`);
+            `Geplante Buchung beendet: ${data.message} (${data.totalAttempts} Versuche)`);
           loadScheduledJobs();
           // Refresh course list if successful
           if (data.success) {
@@ -1078,7 +1077,7 @@
           break;
 
         case 'scheduleError':
-          addLog('error', `📅 Fehler bei geplanter Buchung: ${data.message}`);
+          addLog('error', `Fehler bei geplanter Buchung: ${data.message}`);
           loadScheduledJobs();
           break;
 
@@ -1407,10 +1406,10 @@
               <h3>${course.description} ${statusBadge}</h3>
               <div class="course-meta">
                 ${course.level ? `<strong>${course.level}</strong>` : ''}
-                <span>📅 ${dayName}, ${dateStr}</span>
-                <span>🕐 ${time} Uhr</span>
-                <span>📍 ${course.location} ${locationButton}</span>
-                <span>🎫 ID: ${course.id}</span>
+                <span>${dayName}, ${dateStr}</span>
+                <span>${time} Uhr</span>
+                <span>${course.location} ${locationButton}</span>
+                <span>ID: ${course.id}</span>
                 ${supervisors}
               </div>
             </div>
@@ -1645,7 +1644,7 @@
         
         if (res.ok && data.success) {
           closeScheduleModal();
-          addLog('success', `📅 Buchung geplant für Booking ${bookingId}`);
+          addLog('success', `Buchung geplant für Booking ${bookingId}`);
           loadScheduledJobs();
           // Switch to register tab to show scheduled jobs
           document.querySelector('[data-tab="register"]').click();
@@ -1750,7 +1749,7 @@
         });
         
         if (res.ok) {
-          addLog('info', '📅 Geplante Buchung abgebrochen');
+          addLog('info', 'Geplante Buchung abgebrochen');
           loadScheduledJobs();
         } else {
           const data = await res.json();
