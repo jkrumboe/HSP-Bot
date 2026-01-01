@@ -180,7 +180,7 @@ async function executeScheduledJob(jobData) {
 
   const bookingTime = new Date(bookingAvailableAt);
   const stopTime = calculatePollingStopTime(bookingTime);
-  const pollInterval = 500; // 500ms polling interval for aggressive booking
+  const pollInterval = 300; // 300ms polling interval for aggressive booking
   let attempts = 0;
   let success = false;
 
