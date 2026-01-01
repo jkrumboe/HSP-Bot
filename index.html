@@ -13,9 +13,9 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      background: #f5f5f5;
       min-height: 100vh;
-      color: #e0e0e0;
+      color: #333;
     }
 
     .container {
@@ -31,17 +31,17 @@
 
     header h1 {
       font-size: 2.5em;
-      color: #00d4ff;
+      color: #91C736;
       margin-bottom: 10px;
     }
 
     header p {
-      color: #888;
+      color: #666;
       font-size: 1.1em;
     }
 
     .status-bar {
-      background: rgba(255,255,255,0.05);
+      background: #fff;
       border-radius: 12px;
       padding: 15px 25px;
       margin-bottom: 30px;
@@ -50,6 +50,7 @@
       align-items: center;
       flex-wrap: wrap;
       gap: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
     .status-item {
@@ -66,8 +67,8 @@
     }
 
     .status-dot.connected {
-      background: #44ff44;
-      box-shadow: 0 0 10px #44ff44;
+      background: #91C736;
+      box-shadow: 0 0 10px #91C736;
     }
 
     .tabs {
@@ -78,27 +79,34 @@
 
     .tab {
       padding: 12px 24px;
-      background: rgba(255,255,255,0.05);
+      background: #fff;
       border: none;
       border-radius: 8px;
-      color: #888;
+      color: #666;
       cursor: pointer;
       font-size: 1em;
       transition: all 0.3s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
     }
 
     .tab:hover {
-      background: rgba(255,255,255,0.1);
+      background: #f9f9f9;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.12);
     }
 
     .tab.active {
-      background: #00d4ff;
-      color: #1a1a2e;
+      background: #91C736;
+      color: #fff;
       font-weight: bold;
+      box-shadow: 0 2px 8px rgba(145,199,54,0.3);
     }
 
     .panel {
       display: none;
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
     .panel.active {
@@ -106,7 +114,7 @@
     }
 
     h2 {
-      color: #00d4ff;
+      color: #91C736;
       margin-bottom: 20px;
       font-size: 1.5em;
     }
@@ -114,27 +122,28 @@
     label {
       display: block;
       margin-bottom: 8px;
-      color: #aaa;
+      color: #666;
       font-size: 0.95em;
     }
 
     input, select, textarea {
       width: 100%;
       padding: 12px 15px;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: #f9f9f9;
+      border: 1px solid #ddd;
       border-radius: 8px;
-      color: #fff;
+      color: #333;
       font-size: 1em;
     }
 
     option {
-      color: #000;
+      color: #333;
     }
 
     input:focus, select:focus, textarea:focus {
       outline: none;
-      border-color: #00d4ff;
+      border-color: #91C736;
+      background: #fff;
     }
 
     textarea {
@@ -156,28 +165,31 @@
     }
 
     .btn-primary {
-      background: #00d4ff;
-      color: #1a1a2e;
+      background: #91C736;
+      color: #fff;
       font-weight: bold;
+      box-shadow: 0 2px 4px rgba(145,199,54,0.2);
     }
 
     .btn-primary:hover {
-      background: #00b8e0;
+      background: #7fb32a;
       transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(145,199,54,0.3);
     }
 
     .btn-primary:disabled,
     .btn-secondary:disabled {
       opacity: 0.5;
-      background-color: #1a1a1a;
-      color: #fff;
+      background-color: #ccc;
+      color: #666;
       cursor: not-allowed;
       transform: none !important;
+      box-shadow: none;
     }
 
     .btn-primary:disabled:hover,
     .btn-secondary:disabled:hover {
-      background: #00d4ff;
+      background: #ccc;
       transform: none;
     }
 
@@ -191,8 +203,15 @@
     }
 
     .btn-secondary {
-      background: rgba(255,255,255,0.1);
-      color: #fff;
+      background: #fff;
+      color: #91C736;
+      border: 2px solid #91C736;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .btn-secondary:hover {
+      background: #f0f8e8;
+      transform: translateY(-1px);
     }
 
     .filter-row {
@@ -221,7 +240,7 @@
     }
 
     .course-card {
-      background: rgba(255,255,255,0.05);
+      background: #fff;
       border-radius: 12px;
       padding: 20px;
       margin-bottom: 15px;
@@ -230,28 +249,31 @@
       gap: 15px;
       align-items: center;
       transition: all 0.3s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     }
 
     .course-card:hover {
-      background: rgba(255,255,255,0.08);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      transform: translateY(-2px);
     }
 
     .course-card.full {
       border: 1px dashed #ff4444;
+      opacity: 0.7;
     }
 
     .course-card.booked {
-      border: 2px solid #44ff44;
-      background: rgba(68, 255, 68, 0.05);
+      border: 2px solid #91C736;
+      background: #f0f8e8;
     }
 
     .course-card.waiting {
       border: 2px solid #ffaa00;
-      background: rgba(255, 170, 0, 0.05);
+      background: #fff9e6;
     }
 
     .course-info h3 {
-      color: #fff;
+      color: #333;
       margin-bottom: 8px;
       font-size: 1.1em;
     }
@@ -260,7 +282,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 15px;
-      color: #b8b8b8;
+      color: #666;
       font-size: 0.9em;
     }
 
@@ -278,12 +300,12 @@
     }
 
     .availability.available {
-      background: rgba(68, 255, 68, 0.2);
-      color: #44ff44;
+      background: rgba(145, 199, 54, 0.15);
+      color: #91C736;
     }
 
     .availability.full {
-      background: rgba(255, 68, 68, 0.2);
+      background: rgba(255, 68, 68, 0.15);
       color: #ff4444;
     }
 
@@ -302,7 +324,7 @@
     .btn-link {
       background: none;
       border: none;
-      color: #00d4ff;
+      color: #91C736;
       cursor: pointer;
       font-weight: 600;
       text-decoration: none;
@@ -310,19 +332,20 @@
     }
 
     .btn-link:hover {
-      color: #00ffff;
+      color: #7fb32a;
       text-decoration: underline;
     }
 
     .instructions {
-      background: rgba(0, 212, 255, 0.1);
+      background: #f0f8e8;
       border-radius: 12px;
       padding: 20px;
       margin-bottom: 20px;
+      border-left: 4px solid #91C736;
     }
 
     .instructions h3 {
-      color: #00d4ff;
+      color: #91C736;
       margin-bottom: 15px;
     }
 
@@ -336,38 +359,40 @@
     }
 
     .instructions code {
-      background: rgba(0,0,0,0.3);
+      background: rgba(145,199,54,0.2);
       padding: 2px 8px;
       border-radius: 4px;
       font-family: monospace;
-      color: #00d4ff;
+      color: #5a8c1f;
     }
 
     .log-container {
-      background: #0d1117;
+      background: #f9f9f9;
       border-radius: 12px;
       padding: 20px;
       margin-top: 20px;
       max-height: 400px;
       overflow-y: auto;
+      border: 1px solid #ddd;
     }
 
     .log-entry {
       font-family: monospace;
       font-size: 0.9em;
       padding: 8px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      border-bottom: 1px solid #e0e0e0;
       display: flex;
       gap: 10px;
+      color: #333;
     }
 
     .log-entry .time {
-      color: #666;
+      color: #999;
       min-width: 80px;
     }
 
     .log-entry.success {
-      color: #44ff44;
+      color: #91C736;
     }
 
     .log-entry.error {
@@ -375,7 +400,7 @@
     }
 
     .log-entry.info {
-      color: #00d4ff;
+      color: #2196F3;
     }
 
     .log-entry.warning {
@@ -387,11 +412,12 @@
     }
 
     .job-card {
-      background: rgba(255,255,255,0.05);
+      background: #fff9e6;
       border-radius: 12px;
       padding: 20px;
       margin-bottom: 15px;
       border-left: 4px solid #ffaa00;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
     }
 
     .job-header {
@@ -404,7 +430,7 @@
     .job-stats {
       display: flex;
       gap: 20px;
-      color: #888;
+      color: #666;
       font-size: 0.9em;
     }
 
@@ -412,9 +438,9 @@
       display: inline-block;
       width: 20px;
       height: 20px;
-      border: 3px solid rgba(255,255,255,0.3);
+      border: 3px solid #e0e0e0;
       border-radius: 50%;
-      border-top-color: #00d4ff;
+      border-top-color: #91C736;
       animation: spin 1s linear infinite;
     }
 
@@ -429,7 +455,7 @@
 
     @keyframes flash {
       0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; background: rgba(0, 212, 255, 0.1); }
+      50% { opacity: 0.7; background: rgba(145, 199, 54, 0.1); }
     }
 
     .modal {
@@ -439,7 +465,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.6);
       z-index: 1000;
       align-items: center;
       justify-content: center;
@@ -450,11 +476,12 @@
     }
 
     .modal-content {
-      background: #1a1a2e;
+      background: #fff;
       border-radius: 16px;
       padding: 30px;
       max-width: 500px;
       width: 90%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
     }
 
     .modal-header {
@@ -464,12 +491,20 @@
       margin-bottom: 20px;
     }
 
+    .modal-header h3 {
+      color: #333;
+    }
+
     .modal-close {
       background: none;
       border: none;
-      color: #888;
+      color: #999;
       font-size: 1.5em;
       cursor: pointer;
+    }
+
+    .modal-close:hover {
+      color: #333;
     }
 
     .alert {
@@ -479,19 +514,74 @@
     }
 
     .alert-success {
-      background: rgba(68, 255, 68, 0.2);
-      border: 1px solid #44ff44;
-      color: #44ff44;
+      background: rgba(145, 199, 54, 0.15);
+      border: 1px solid #91C736;
+      color: #5a8c1f;
     }
 
     .alert-error {
-      background: rgba(255, 68, 68, 0.2);
+      background: rgba(255, 68, 68, 0.15);
       border: 1px solid #ff4444;
-      color: #ff4444;
+      color: #cc0000;
     }
 
     .hidden {
       display: none !important;
+    }
+
+    .scheduled-jobs {
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .scheduled-job-card {
+      background: #f9f9f9;
+      border-radius: 12px;
+      padding: 15px 20px;
+      margin-bottom: 15px;
+      border-left: 4px solid #91C736;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    .scheduled-job-card.running {
+      border-left-color: #ffaa00;
+      background: #fff9e6;
+    }
+
+    .scheduled-job-card.completed {
+      border-left-color: #91C736;
+      opacity: 0.7;
+    }
+
+    .scheduled-job-card.failed {
+      border-left-color: #ff4444;
+      background: #fff5f5;
+    }
+
+    .schedule-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: #666;
+    }
+
+    .schedule-info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .schedule-info-label {
+      font-size: 0.8em;
+      color: #999;
+    }
+
+    .schedule-time-highlight {
+      color: #91C736;
+      font-weight: bold;
     }
 
    @media (max-width: 768px) {
@@ -718,7 +808,7 @@
       <div class="instructions">
         <h3>Anleitung zum Abrufen der Auth-Daten</h3>
         <ol>
-          <li>Öffne die <a href="https://buchung.hssp-muenster.de/" target="_blank" style="color: #00d4ff;">HSP-Website</a> und melde dich an</li>
+          <li>Öffne die <a href="https://buchung.hssp-muenster.de/" target="_blank" style="color: #91C736;">HSP-Website</a> und melde dich an</li>
           <li>Drücke <code>F12</code> um die Entwickler-Tools zu öffnen</li>
           <li>Wechsle zum Tab <code>Console</code></li>
           <li>Gib folgenden Befehl ein und drücke Enter:
@@ -1383,7 +1473,7 @@
           if (titleEl) {
             const titleText = titleEl.textContent.split('<span')[0].trim();
             const courseName = course.description;
-            titleEl.innerHTML = `${courseName} <span style="color: #44ff44; font-weight: bold;">Angemeldet</span>`;
+            titleEl.innerHTML = `${courseName} <span style="color: #91C736; font-weight: bold;">✓ Angemeldet</span>`;
           }
         } else if (isWaiting) {
           // Waiting list
